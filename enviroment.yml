@@ -1,0 +1,17 @@
+name: surgical_copilot
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  
+  
+  # Data Science Stack
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  
+
+  - pip:
+      - -r requirements.txt
