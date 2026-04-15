@@ -1,0 +1,33 @@
+# Ciclo di vita del training
+max_epochs: 100
+batch_size: 4 # Regola in base alla VRAM della tua GPU
+val_interval: 2 # Ogni quante epoche fare la validazione
+save_checkpoint: True
+
+# Ottimizzatore (Standard per Medical Imaging)
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 1e-4
+  weight_decay: 1e-5
+
+# Scheduler (Per far convergere il modello dolcemente)
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: ${trainer.max_epochs}
+  eta_min: 1e-6
+
+# Loss Function (Specifica per HemoSet - squilibrio classi)
+loss:
+  _target_: monai.losses.DiceLoss
+  sigmoid: True # Fondamentale se hai 1 classe (sangue/fondo)
+  smooth_nr: 1e-5
+  smooth_dr: 1e-5
+
+# Early Stopping (Per evitare l'overfitting)
+early_stopping:
+  patience: 15
+  monitor: "val_dice"
+  mode: "max"
+
+# Precisione (Importante per il futuro TensorRT)
+precision: 16 # "32" o "16" (Mixed Precision per velocità)
