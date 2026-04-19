@@ -1,4 +1,5 @@
-[core]
-    remote = myremote
-['remote "origin"']
-    url = s3://dvc
+core:
+  remote: origin
+
+remote "origin":
+  url: s3://dvc
