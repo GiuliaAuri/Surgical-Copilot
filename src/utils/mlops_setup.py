@@ -9,7 +9,7 @@ def initialize_mlops(project_name, run_name, config=None):
     load_dotenv() 
 
     dagshub.init(
-        repo_owner='minila03', 
+        repo_owner='minicla03', 
         repo_name='surgical-copilot', 
         mlflow=True
     )
