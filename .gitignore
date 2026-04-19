@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 
 # Data & Models (Gestiti da DVC)
+.dvc/
 data/raw/
 data/processed/
 weights/*.pth
