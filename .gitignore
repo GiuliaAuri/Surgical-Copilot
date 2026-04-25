@@ -16,3 +16,4 @@ wandb/                  # Log locali di W&B
 # Configurazioni e Ambienti
 .env
 .vscode/
+src\try.py
