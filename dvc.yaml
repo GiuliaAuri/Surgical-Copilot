@@ -1,0 +1,17 @@
+stages:
+  extraction_hemoset:
+    cmd: python src/surgical_copilot/data_extraction.py --source_dir data/hemoset --target_dir data/raw
+    deps:
+      - data/hemoset
+      - data/raw
+    outs:
+      - data/raw
+
+  benchmarking:
+    cmd: python src/bench/benchmarking.py
+    deps:
+      - data/raw
+      - src/bench/benchmarking.py
+    metrics:
+      - metrics.json:
+          cache: false

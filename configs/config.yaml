@@ -1,10 +1,14 @@
 defaults:
+  - model: unet
+  - data: hemoset
+  - robustness: robustness
   - _self_
-  - model: unet # Default: carica configs/model/unet.yaml
-  - dataset: hemoset # Default: carica configs/dataset/hemoset.yaml
-  - trainer: default # Default: carica configs/trainer/default.yaml
 
-# Variabili globali
 seed: 42
-device: "cuda"
-debug: False
+device: cuda
+debug: false
+
+logging:
+  project: surgical-copilot
+  wandb_enabled: true
+  mlflow_enabled: true

@@ -1,0 +1,9 @@
+_target_: models.swin_unet.SwinUNet
+
+img_size: [224, 224]
+in_channels: 3
+out_channels: 1
+feature_size: 24
+depths: [2, 2, 2, 2]
+num_heads: [3, 6, 12, 24]
+window_size: 7

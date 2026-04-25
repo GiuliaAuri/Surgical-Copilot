@@ -1,0 +1,11 @@
+perturbations:
+  - none
+  - gaussian_noise
+  - motion_blur
+  - smoke
+  - specular
+
+intensities: [0.0, 0.2, 0.4, 0.6, 0.8]
+
+batch_size: 1
+num_workers: 4

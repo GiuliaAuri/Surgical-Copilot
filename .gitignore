@@ -12,3 +12,7 @@ weights/*.engine
 .ipynb_checkpoints/
 outputs/                # Cartella generata da Hydra per ogni run
 wandb/                  # Log locali di W&B
+
+# Configurazioni e Ambienti
+.env
+.vscode/

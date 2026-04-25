@@ -1,0 +1,6 @@
+_target_: monai.networks.nets.BasicUNetPlusPlus
+
+spatial_dims: 2
+in_channels: 3
+out_channels: 1
+features: [32, 64, 128, 256, 512]

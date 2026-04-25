@@ -1,0 +1,4 @@
+_target_: surgical_copilot.HemoDataset.get_hemo_dataset
+
+root_dir: data/raw
+cache_rate: 1.0
