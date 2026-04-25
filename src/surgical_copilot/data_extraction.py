@@ -1,9 +1,8 @@
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
-from zipfile import ZipFile, ZipInfo
+from zipfile import ZipFile
 import argparse
-import os
 
 def extraction():
 
