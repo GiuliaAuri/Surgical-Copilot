@@ -1,0 +1,17 @@
+schema: '2.0'
+stages:
+  extraction_hemoset:
+    cmd: python src/surgical_copilot/data_extraction.py --source_dir 
+      data/hemoset --target_dir data/raw
+    deps:
+    - path: data/hemoset
+      hash: md5
+      md5: 935f8a1f73739bf59917b4ba6c26d0cb.dir
+      size: 493608395
+      nfiles: 20
+    outs:
+    - path: data/raw
+      hash: md5
+      md5: 5e0703df103b89de06f38bd230778d15.dir
+      size: 493557430
+      nfiles: 1924
