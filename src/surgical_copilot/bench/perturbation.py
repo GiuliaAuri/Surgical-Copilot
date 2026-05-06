@@ -9,7 +9,7 @@ from monai.transforms import (
 )
 
 class RandSpecularReflectiond(MapTransform):
-   
+
     def __init__(self, keys, prob=0.1, intensity=0.1, allow_missing_keys=False):
         super().__init__(keys, allow_missing_keys)
         self.prob = prob
@@ -20,8 +20,8 @@ class RandSpecularReflectiond(MapTransform):
         for key in self.key_iterator(d):
             if torch.rand(1).item() < self.prob:
                 x = d[key]
-                mask = (torch.rand_like(x[0:1, ...]) < (self.intensity / 100)) # create light reflection mask
-                d[key] = torch.where(mask > 0.5, x.max(), x) # apply specular reflection
+                mask = (torch.rand_like(x) < (self.intensity)) # create light reflection mask
+                d[key] = torch.where(mask, x.max(), x) # apply specular reflection
         return d
 
 class PerturbationFactory:
