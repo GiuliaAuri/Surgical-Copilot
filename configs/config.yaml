@@ -1,11 +1,10 @@
 defaults:
   - model: models
   - data: hemoset
-  #- robustness: robustness
   - trainer: default
   - _self_
 
-models_to_bench: ["unet", "swin", "resunet"]
+models_to_bench: ["unet", "unet_plus_plus", "swin_unet"]
 seed: 42
 device: cuda
 debug: false

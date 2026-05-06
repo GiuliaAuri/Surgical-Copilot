@@ -1,10 +1,9 @@
 # Lifecycle of the training process
 trainer:
-  max_epochs: 100
-  val_interval: 1
+  max_epochs: 20
   save_checkpoint: True
   num_workers: 4
-  batch_size: 1
+  batch_size: 3
   precision: "16-mixed"
 
 # Optimizer
@@ -26,13 +25,13 @@ scaler:
 
 # Loss Function
 loss:
-  _target_: monai.losses.DiceLoss
+  _target_: monai.losses.DiceCELoss
   sigmoid: True
-  smooth_nr: 1e-5
-  smooth_dr: 1e-5
+  lambda_dice: 0.5
+  lambda_ce: 0.5
 
 # Early Stopping
 early_stopping:
-  patience: 15
+  patience: 5
   monitor: "val_dice"
   mode: "max"
