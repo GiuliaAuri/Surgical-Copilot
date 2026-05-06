@@ -11,7 +11,7 @@ from surgical_copilot.bench.perturbation import PerturbationPipelines
 
 @hydra.main(version_base=None, config_path="../../../configs", config_name="config") 
 def benchmarking(cfg: DictConfig):
-
+    print("Script avviato!")
     device = torch.device(cfg.device if torch.cuda.is_available() else "cpu")
     print(f"[*] Device selezionato: {device}")
 
@@ -70,5 +70,6 @@ def benchmarking(cfg: DictConfig):
         del model, optimizer, scheduler, engine
         torch.cuda.empty_cache()
 
-    if __name__ == "__main__":
-        benchmarking()
+if __name__ == "__main__":
+    print(f"[*] Starting benchmarking with config:\n{OmegaConf.to_yaml(cfg)}")
+    benchmarking()
