@@ -27,3 +27,9 @@ omegaconf==2.3.0
 # --- Deployment & Inference (ONNX) ---
 onnx==1.15.0
 onnxruntime==1.17.1
+
+# --- Vision Transformers / Swin-Unet ---
+einops==0.7.0
+timm==0.4.12
+yacs==0.1.8
+ml-collections==0.1.1

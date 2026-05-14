@@ -23,9 +23,7 @@ def extraction():
         
         for zip_file in zip_files:
             with ZipFile(zip_file, 'r') as zip_ref:
-                # Otteniamo la lista dei file all'interno dello zip
                 for member in zip_ref.infolist():
-                    # Definiamo la destinazione in base al contenuto del path nel file zip
                     if "imgs/" in member.filename:
                         dest = target_dir / subject / "imgs"
                     elif "labels/" in member.filename:
