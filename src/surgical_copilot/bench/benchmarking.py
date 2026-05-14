@@ -17,21 +17,25 @@ def benchmarking(cfg: DictConfig):
 
     # Dataset Loading
     print(f"[*] Loading dataset") 
-    dataset = HemosetDataSet(root_dir=cfg.data.root_dir)
+    dataset = HemosetDataSet(root_dir=cfg.data.root_dir,seed=cfg.seed, image_size=cfg.data.img_size)
     
-    # same loader for each model
-    train_loader, val_loader = dataset.get_loaders(
-        train_split=0.8, 
-        cache_rate=1.0,
-        batch_size=cfg.trainer.trainer.batch_size,
-        num_workers=cfg.trainer.trainer.num_workers,
-        train_transforms=PerturbationPipelines.get_train_pipeline()
-    )
+    all_fold_metrics = list(range(cfg.data.n_folds))
 
-    for model_key in cfg.models_to_bench:
+    for fold in range(cfg.data.n_folds):
+        print(f"\n{'#'*50}\n[*] Fold {fold+1}/{cfg.data.n_folds}\n{'#'*50}")
+
+        # same loader for each model
+        train_loader, val_loader, test_loader= dataset.get_loaders(
+            fold_idx=fold,
+            n_splits=cfg.data.n_folds,
+            batch_size=cfg.trainer.trainer.batch_size,
+            num_workers=cfg.trainer.trainer.num_workers,
+            train_transforms=PerturbationPipelines.get_train_pipeline()
+        )
+
+        model_key = cfg.model_key
         print(f"\n{'='*30}\n[*] BENCHMARKING MODEL: {model_key}\n{'='*30}")
-        
-        torch.manual_seed(cfg.seed) 
+
         model = instantiate(cfg.model[model_key]).to(device)
 
         # training components
@@ -45,6 +49,7 @@ def benchmarking(cfg: DictConfig):
             model=model, 
             train_loader=train_loader, 
             val_loader=val_loader, 
+            test_loader=test_loader,
             optimizer=optimizer, 
             scheduler=scheduler, 
             loss_fn=loss_fn, 
@@ -62,14 +67,24 @@ def benchmarking(cfg: DictConfig):
                 reinit=True
             )
 
-        engine.run()
+        fold_metrics = engine.run()
+        all_fold_metrics.append(fold_metrics)
 
         if cfg.logging.wandb_enabled:
             wandb.finish()
 
         del model, optimizer, scheduler, engine
         torch.cuda.empty_cache()
+    
+    dice_list = [x["dice"] for x in all_fold_metrics]
+    hd95_list = [x["hd95"] for x in all_fold_metrics]
+
+    mean_dice, std_dice = np.mean(dice_list), np.std(dice_list)
+    mean_hd95, std_hd95 = np.mean(hd95_list), np.std(hd95_list)
+
+    print("\n" + "=" * 80)
+    print(f"FINAL RESULTS | Dice: {mean_dice:.4f} ± {std_dice:.4f} | HD95: {mean_hd95:.4f} ± {std_hd95:.4f}")
+    print("=" * 80)
 
 if __name__ == "__main__":
-    print(f"[*] Starting benchmarking with config:\n{OmegaConf.to_yaml(cfg)}")
     benchmarking()
