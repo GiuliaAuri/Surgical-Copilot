@@ -61,7 +61,14 @@ class RandSurgicalSmoked(MapTransform):
         for key in self.key_iterator(d):
             if torch.rand(1).item() < self.prob:
                 img = d[key]
-                C, H, W = img.shape
+
+                if img.ndim == 4:
+                    B, C, H, W = img.shape
+                elif img.ndim == 3:
+                    B = 1
+                    C, H, W = img.shape
+                else:
+                    continue
                 
                 smoke_low_res = torch.rand((1, H // 32, W // 32), device=img.device)
                 smoke_mask = F.interpolate(smoke_low_res.unsqueeze(0), size=(H, W), mode='bicubic', align_corners=False).squeeze(0)

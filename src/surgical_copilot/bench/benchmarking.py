@@ -1,5 +1,6 @@
 import hydra
 import torch
+import gc
 import numpy as np
 import wandb
 from omegaconf import DictConfig, OmegaConf
@@ -19,7 +20,8 @@ def benchmarking(cfg: DictConfig):
     print(f"[*] Loading dataset") 
     dataset = HemosetDataSet(root_dir=cfg.data.root_dir,seed=cfg.seed, image_size=cfg.data.img_size)
     
-    all_fold_metrics = list(range(cfg.data.n_folds))
+    all_fold_metrics = []
+    model_key = cfg.model_key
 
     for fold in range(cfg.data.n_folds):
         print(f"\n{'#'*50}\n[*] Fold {fold+1}/{cfg.data.n_folds}\n{'#'*50}")
@@ -33,7 +35,6 @@ def benchmarking(cfg: DictConfig):
             train_transforms=PerturbationPipelines.get_train_pipeline()
         )
 
-        model_key = cfg.model_key
         print(f"\n{'='*30}\n[*] BENCHMARKING MODEL: {model_key}\n{'='*30}")
 
         model = instantiate(cfg.model[model_key]).to(device)
@@ -63,7 +64,8 @@ def benchmarking(cfg: DictConfig):
             wandb.init(
                 project=cfg.logging.project, 
                 config=resolved_cfg, 
-                name=f"bench_{model_key}",
+                group=f"fold_{fold+1}",
+                name=f"{model_key}_fold_{fold}",
                 reinit=True
             )
 
@@ -75,12 +77,28 @@ def benchmarking(cfg: DictConfig):
 
         del model, optimizer, scheduler, engine
         torch.cuda.empty_cache()
+        gc.collect()
     
     dice_list = [x["dice"] for x in all_fold_metrics]
     hd95_list = [x["hd95"] for x in all_fold_metrics]
 
     mean_dice, std_dice = np.mean(dice_list), np.std(dice_list)
     mean_hd95, std_hd95 = np.mean(hd95_list), np.std(hd95_list)
+
+    if cfg.logging.wandb_enabled:
+        wandb.init(
+            project=cfg.logging.project, 
+            group=model_key, 
+            job_type="final_stats", 
+            name=f"{model_key}_summary"
+        )
+        wandb.log({
+            "mean_dice": mean_dice,
+            "std_dice": std_dice,
+            "mean_hd95": mean_hd95,
+            "std_hd95": std_hd95
+        })
+        wandb.finish()
 
     print("\n" + "=" * 80)
     print(f"FINAL RESULTS | Dice: {mean_dice:.4f} ± {std_dice:.4f} | HD95: {mean_hd95:.4f} ± {std_hd95:.4f}")

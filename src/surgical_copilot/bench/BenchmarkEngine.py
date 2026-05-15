@@ -234,7 +234,7 @@ class BenchmarkEngine:
                         torch.cuda.synchronize()
 
                     batch_time = time.perf_counter() - start_time
-                    total_modedel_time += batch_time
+                    total_model_time += batch_time
                     total_images += x.shape[0]
 
                     # deep supervision handling
