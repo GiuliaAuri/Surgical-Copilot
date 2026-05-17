@@ -30,3 +30,8 @@ swin_unetr:
     feature_size: 48
     spatial_dims: 2 # generally SwinUNETR is used with 3D image. In this way we can manage 2D frame
     use_checkpoint: True
+
+yolo_v8_seg:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
+  num_classes: 1
+  num_masks: 32
