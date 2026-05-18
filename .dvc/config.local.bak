@@ -1,0 +1,9 @@
+[remote "myremote"]
+    auth = basic
+    user = GiuliaAuri
+    password = e11c2393ac8eb45f999605a54aa56d8612869fb1
+
+[remote "upstream_data"]
+    auth = basic
+    user = GiuliaAuri
+    password = e11c2393ac8eb45f999605a54aa56d8612869fb1
