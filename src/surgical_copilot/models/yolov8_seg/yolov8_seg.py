@@ -57,14 +57,16 @@ class SPPF(nn.Module):
     
 
 class YOLOv8Backbone(nn.Module):
-    def __init__(self, channels=[64, 128, 256]):
+    def __init__(self, in_channels=3, channels=[64, 128, 256]):
         super().__init__()
+    
         # Stem
         self.stem = nn.Sequential(
-            CBS(3, 16, 3, 2),   # [B, 16, 320, 320]
-            CBS(16, 32, 3, 2),  # [B, 32, 160, 160]
+            CBS(in_channels, 16, 3, 2),  # [B, 16, 320, 320]
+            CBS(16, 32, 3, 2),  
             C2f(32, 32, n=1, shortcut=True)
         )
+        
         # Stage 1 -> P3 (Alta risoluzione, dettagli fini)
         self.stage1 = nn.Sequential(CBS(32, channels[0], 3, 2), C2f(channels[0], channels[0], n=2, shortcut=True))
         # Stage 2 -> P4 (Risoluzione media)
@@ -117,12 +119,14 @@ class YOLOv8SegHead(nn.Module):
 
 # --- Modello FINALE ---
 class YOLOv8Segmenter(nn.Module):
-    def __init__(self, num_classes=2, num_masks=32):
+
+    def __init__(self, in_channels=3, num_classes=2, num_masks=32):
         super().__init__()
         # Struttura modulare
-        self.backbone = YOLOv8Backbone()
-        self.neck = YOLOv8Neck()
+        self.backbone = YOLOv8Backbone(in_channels=in_channels)
+        self.neck = YOLOv8Neck() 
         self.head = YOLOv8SegHead(in_channels=64, num_classes=num_classes, num_masks=num_masks)
+    
 
     def forward(self, x):
         # 1. Estrazione spaziale
