@@ -25,7 +25,8 @@ class BenchmarkEngine:
         scaler,
         cfg,
         device,
-        fold_idx=0
+        fold_idx=0,
+        is_temporal=False
     ):
         self.model = model.to(device)
         self.train_loader = train_loader
@@ -40,6 +41,7 @@ class BenchmarkEngine:
         self.cfg = cfg
         self.device = device
         self.fold_idx = fold_idx
+        self.is_temporal = is_temporal
 
         self.dice_metric = DiceMetric(reduction="mean")
         self.hd95_metric = HausdorffDistanceMetric(percentile=95)
@@ -69,13 +71,32 @@ class BenchmarkEngine:
         self.optimizer.zero_grad()
 
         pbar = tqdm(self.train_loader, desc="Training")
+        mask_prev = None # Inizializziamo la memoria all'inizio dell'epoca
 
         for i, batch in enumerate(pbar):
             x = batch["image"].to(self.device)
             y = batch["label"].to(self.device)
 
+            # --- INIZIO LOGICA TEMPORALE ---
+            if self.is_temporal:
+                # Recupera il flag (Monai restituisce un tensore booleano per i dati singoli)
+                is_first = batch.get("is_first_frame", [False])[0]
+                if isinstance(is_first, torch.Tensor):
+                    is_first = is_first.item()
+
+                # Se è il primo frame o la memoria è vuota, crea una maschera nera
+                if is_first or mask_prev is None:
+                    mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
+
+                # Uniamo immagine e maschera precedente (da 3 a 4 canali)
+                x_input = torch.cat([x, mask_prev], dim=1)
+            else:
+                # Baseline classica (3 canali)
+                x_input = x
+            # --- FINE LOGICA TEMPORALE ---
+
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                logits = self.model(x)
+                logits = self.model(x_input)
 
                 # manage the Deep Supervision configuration
                 if isinstance(logits, list):
@@ -84,6 +105,11 @@ class BenchmarkEngine:
                     loss = self.loss_fn(logits, y)
 
                 loss = loss / accumulation_steps
+
+            # --- AGGIORNO LA MEMORIA PER IL PROSSIMO CICLO ---
+            if self.is_temporal:
+                # TEACHER FORCING: Durante il training usiamo la maschera vera (Ground Truth) per insegnare alla rete in modo stabile. 
+                mask_prev = y.clone().detach()
 
             if self.scaler is not None:
                 self.scaler.scale(loss).backward()

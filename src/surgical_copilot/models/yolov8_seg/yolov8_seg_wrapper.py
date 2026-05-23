@@ -7,10 +7,10 @@ from surgical_copilot.models.yolov8_seg import YOLOv8Segmenter
 # (Assicurati che il nome del file da cui importi sia corretto)
 
 class CustomYOLOSemantic(nn.Module):
-    def __init__(self, num_classes=1, num_masks=32):
+    def __init__(self, in_channels=3, num_classes=1, num_masks=32):
         super().__init__()
-        # Inizializza la TUA rete scritta da zero in PyTorch
-        self.yolo = YOLOv8Segmenter(num_classes=num_classes, num_masks=num_masks)
+        self.yolo = YOLOv8Segmenter(in_channels=in_channels, num_classes=num_classes, num_masks=num_masks)
+
 
     def forward(self, x):
         # 1. Passa il frame chirurgico nella tua rete

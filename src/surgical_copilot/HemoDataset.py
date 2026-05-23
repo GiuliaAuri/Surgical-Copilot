@@ -46,9 +46,14 @@ class HemosetDataSet:
                 print(f"[Warning] Maschera mancante per l'immagine {img_path.name}. Skip.")
                 continue
 
+            
+            # È il primo frame se la lista per questo paziente è ancora vuota
+            is_first = (len(self.patient_data[patient_id]) == 0)
+
             self.patient_data[patient_id].append({
                 "image": str(img_path),
-                "label": str(final_mask_path)
+                "label": str(final_mask_path),
+                "is_first_frame": is_first  
             })
 
         if not self.patient_data:
@@ -65,7 +70,7 @@ class HemosetDataSet:
             ToTensord(keys=["image", "label"], dtype=torch.float32),
         ])
 
-    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
+    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None, temporal_mode=False):
         
         patients = sorted(list(self.patient_data.keys()))
         self.rng.shuffle(patients)
@@ -75,6 +80,7 @@ class HemosetDataSet:
 
         patients = patients.copy()
         self.rng.shuffle(patients)
+        
 
         kf = KFold(
             n_splits=n_splits,
@@ -125,7 +131,8 @@ class HemosetDataSet:
         for p in test_patients:
             test_files.extend(self.patient_data[p])
 
-        self.rng.shuffle(train_files)
+        if not temporal_mode:
+            self.rng.shuffle(train_files)
 
         print(
             f"[*] Samples "
@@ -140,10 +147,12 @@ class HemosetDataSet:
         val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
         test_ds = CacheDataset(test_files, transform=self.base_transforms, cache_rate=cache_rate)
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
+
+        do_shuffle = not temporal_mode
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=do_shuffle, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
         val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
         test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
-    
+
         return train_loader, val_loader, test_loader
 
     def get_sample(self, split="train", index=None, patient_id=None, transform=True):
