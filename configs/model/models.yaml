@@ -37,7 +37,8 @@ yolo_v8_seg:
   num_masks: 32
 
 yolo_v8_seg_temporal:
-  _target_: surgical_copilot.models.custom_yolo.YOLOv8Semantic
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
   in_channels: 4   # 3 canali RGB + 1 canale della Maschera t-1
   num_classes: 1
   num_masks: 32
+  is_temporal: true

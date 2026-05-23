@@ -36,14 +36,15 @@ def benchmarking(cfg: DictConfig):
         
         # CONFIGURAZIONE DATALOADER ---
         # Per i modelli temporali autoregressivi, il batch_size DEVE essere 1
-        b_size = 1 if is_temporal_model else cfg.data.batch_size
+        b_size = 1 if is_temporal_model else OmegaConf.select(cfg, "data.batch_size", default=4)
+        num_w = OmegaConf.select(cfg, "data.num_workers", default=4)
         
         # same loader for each model
         train_loader, val_loader, test_loader = dataset.get_loaders(
             fold_idx=fold,
             n_splits=cfg.data.n_folds,
             batch_size=b_size,                
-            num_workers=cfg.data.num_workers,
+            num_workers=num_w,
             train_transforms=PerturbationPipelines.get_train_pipeline(), 
             temporal_mode=is_temporal_model   
         )
@@ -52,6 +53,7 @@ def benchmarking(cfg: DictConfig):
         # ISTANZIAZIONE DEL MODELLO 
         # Attenzione: Usiamo 'model_cfg' (il dizionario pulito) 
         model = instantiate(model_cfg).to(device)
+        
 
         # training components
         optimizer = instantiate(cfg.trainer.optimizer, params=model.parameters())
