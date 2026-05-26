@@ -124,7 +124,7 @@ class BenchmarkEngine:
                 for _ in range(5):
                     _ = self.model(dummy)
 
-        with torch.no_grad():
+        with torch.inference_mode():
             self.dice_metric.reset()
             self.hd95_metric.reset()
             self.iou.reset()
@@ -138,7 +138,6 @@ class BenchmarkEngine:
                 batch = clean_pipeline(batch)
                 x = batch["image"].to(self.device)
                 y = batch["label"].to(self.device)
-
 
                 # Sincronizzazione per FPS
                 if self.device.type == "cuda":
@@ -184,7 +183,6 @@ class BenchmarkEngine:
 
                 total_images += x.shape[0]
             
-           
             metrics["inference_fps"] = total_images / max(total_model_time, 1e-8)
             metrics["baseline"]["dice"] = self.dice_metric.aggregate().item()
             metrics["baseline"]["hd95"] = self.hd95_metric.aggregate().item()
@@ -204,7 +202,7 @@ class BenchmarkEngine:
             "stress": {}
         }
 
-        with torch.no_grad():
+        with torch.inference_mode():
 
             for scenario_name, pipeline in eval_scenarios.items():
 
@@ -265,23 +263,42 @@ class BenchmarkEngine:
                         drop_info = f" | Drop: {robustness_drop * 100:>5.1f}%"
 
                     print(f"[{scenario_name:<20}] Dice: {scores['dice']:.4f} | HD95: {scores['hd95']:>7.2f}{drop_info}")
+
+        if wandb.run is not None:
+            test_log_dict = {
+                "Test_Baseline/Dice": metrics["baseline"]["dice"],
+                "Test_Baseline/HD95": metrics["baseline"]["hd95"],
+                "Test_Baseline/IoU": metrics["baseline"]["iou"],
+                "Test_System/Inference_FPS": metrics["baseline"].get("inference_fps", 0.0),
+            }
+
+            for scenario, scores in metrics["stress"].items():
+                test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores["dice"]
+                test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores["hd95"]
+                test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores["iou"]
+                test_log_dict[f"Test_Stress_Drop/{scenario}"] = scores["drop"]
+
+            wandb.log(test_log_dict)
+
         return metrics
 
     def run(self):
         epochs = self.cfg.trainer.trainer.max_epochs
-        eval_freq = self.cfg.trainer.trainer.get("eval_freq", 5) 
         best_fold_metrics = {"dice": 0.0, "hd95": 0.0, "iou": 0.0}
-        #best_dice = 0.0
+        
+        best_path = None
+
+        #if wandb.run is not None:
+        #    wandb.watch(self.model, log="all", log_freq=100)
 
         for epoch in range(epochs):
 
             print(f"\n===== Epoch {epoch+1}/{epochs} =====")
 
+            # TRAIN PROCESS
             train_loss = self._train()
 
-            is_last_epoch = (epoch == epochs - 1)
-            #should_run_stress = (epoch == 0) or ((epoch + 1) % eval_freq == 0) or is_last_epoch
-
+            # VALIDATION PROCESS
             metrics = self._validate(epoch)
 
             val_loss = metrics["val_loss"]
@@ -296,28 +313,33 @@ class BenchmarkEngine:
             print(f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             print(f"Clean Dice: {clean_dice:.4f} | FPS: {fps:.2f}")
 
-            #if should_run_stress:
-            #    # compute and print drops for each stress scenario
-            #    for scenario, scores in metrics["stress"].items():
-            #        drop = (clean_dice - scores["dice"]) / (clean_dice + 1e-8)
-            #        print(f"{scenario}: {scores['dice']:.4f} | drop: {drop*100:.1f}%")
-
             if clean_dice > best_fold_metrics["dice"]:
                 best_fold_metrics = metrics["baseline"]
-                model_name = self.model.__class__.__name__
-                save_path = f"results/best_{model_name}_fold{self.fold_idx}.pth"
-                Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-                torch.save(self.model.state_dict(), save_path)
-                best_path = save_path
-
+                best_path = self._save_checkpoint(self.fold_idx)
+    
             self._log_wandb(epoch, train_loss, metrics)
+
+        if best_path is None:
+            raise RuntimeError("Training finish without any valid checkpoint.")
 
         self.model.load_state_dict(torch.load(best_path, map_location=self.device))
         test_metrics = self._test()
+
         print("\n=== TEST RESULTS ON BEST MODEL ===")
         print(f"Baseline | Dice: {test_metrics['baseline']['dice']:.4f} | HD95: {test_metrics['baseline']['hd95']:.4f} | IoU: {test_metrics['baseline']['iou']:.4f}")
 
         return best_fold_metrics
+
+    def _save_checkpoint(self, fold_idx: int) -> str:
+        model_name = self.model.__class__.__name__
+        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
+        weights_dir = base_dir / model_name
+        weights_dir.mkdir(parents=True, exist_ok=True)
+        
+        save_path = weights_dir / f"best_fold{fold_idx}.pth"
+        torch.save(self.model.state_dict(), save_path)
+        
+        return str(save_path)
 
     def _log_wandb(self, epoch, train_loss, metrics):
         

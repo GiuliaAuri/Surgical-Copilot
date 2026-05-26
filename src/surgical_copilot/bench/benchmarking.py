@@ -6,6 +6,8 @@ import wandb
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 
+from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
+
 from surgical_copilot.bench.BenchmarkEngine import BenchmarkEngine
 from surgical_copilot.HemoDataset import HemosetDataSet
 from surgical_copilot.bench.perturbation import PerturbationPipelines
@@ -41,7 +43,31 @@ def benchmarking(cfg: DictConfig):
 
         # training components
         optimizer = instantiate(cfg.trainer.optimizer, params=model.parameters())
-        scheduler = instantiate(cfg.trainer.scheduler, optimizer=optimizer)
+        #scheduler = instantiate(cfg.trainer.scheduler, optimizer=optimizer)
+
+        warmup_epochs = 5
+        max_epochs = cfg.trainer.trainer.max_epochs
+
+        warmup_scheduler = LinearLR(
+            optimizer, 
+            start_factor=0.01, 
+            total_iters=warmup_epochs
+        )
+
+        # Fase 2: Cosine Annealing per le epoche rimanenti
+        cosine_scheduler = CosineAnnealingLR(
+            optimizer, 
+            T_max=max_epochs - warmup_epochs, 
+            eta_min=1e-6
+        )
+
+        # Fase 3: Concatenazione
+        scheduler = SequentialLR(
+            optimizer, 
+            schedulers=[warmup_scheduler, cosine_scheduler], 
+            milestones=[warmup_epochs]
+        )
+
         loss_fn = instantiate(cfg.trainer.loss)
         scaler = instantiate(cfg.trainer.scaler)
 
@@ -61,12 +87,15 @@ def benchmarking(cfg: DictConfig):
 
         if cfg.logging.wandb_enabled:
             resolved_cfg = OmegaConf.to_container(cfg, resolve=True)
+            exp_name = cfg.logging.get("exp_tag", "baseline")
             wandb.init(
                 project=cfg.logging.project, 
                 config=resolved_cfg, 
-                group=f"fold_{fold+1}",
+                group=f"{exp_name}_fold_{fold+1}", 
                 name=f"{model_key}_fold_{fold}",
-                reinit=True
+                reinit=True,
+                tags=exp_name
+
             )
 
         fold_metrics = engine.run()
@@ -90,7 +119,7 @@ def benchmarking(cfg: DictConfig):
             project=cfg.logging.project, 
             group=model_key, 
             job_type="final_stats", 
-            name=f"{model_key}_summary"
+            name=f"{model_key}_summary",
         )
         wandb.log({
             "mean_dice": mean_dice,

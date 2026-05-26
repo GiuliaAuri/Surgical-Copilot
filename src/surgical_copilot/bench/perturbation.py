@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from monai.transforms import (
     RandSpatialCropd,
+    RandCropByPosNegLabeld,
     RandGaussianNoised,
     RandGaussianSmoothd,
     RandAdjustContrastd,
@@ -117,7 +118,15 @@ class PerturbationPipelines:
     def get_train_pipeline():
         # same cofiguaration of Hemoset's authors for training
         return Compose([
-            RandSpatialCropd(keys=['image', 'label'], roi_size=(320, 320), random_size=False), 
+            #RandSpatialCropd(keys=['image', 'label'], roi_size=(320, 320), random_size=False), 
+            RandCropByPosNegLabeld(
+                keys=['image', 'label'],
+                label_key='label',
+                spatial_size=(320, 320),
+                pos=1, # Peso per patch con target
+                neg=1, # Peso per patch di solo background
+                num_samples=1
+            ),
             RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)) 
         ])
 

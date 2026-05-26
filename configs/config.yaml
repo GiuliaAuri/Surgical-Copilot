@@ -14,3 +14,4 @@ debug: false
 logging:
   project: surgical-copilot
   wandb_enabled: true
+  exp_tag: "focal_warmup"
