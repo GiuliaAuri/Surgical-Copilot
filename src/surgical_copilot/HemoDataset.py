@@ -150,8 +150,8 @@ class HemosetDataSet:
 
         do_shuffle = not temporal_mode
         train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=do_shuffle, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
-        val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
-        test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
+        val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
+        test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
 
         return train_loader, val_loader, test_loader
 

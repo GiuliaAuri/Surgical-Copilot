@@ -11,14 +11,14 @@ trainer:
 # Optimizer
 optimizer:
   _target_: torch.optim.AdamW
-  lr: 1e-4
+  lr: 1e-3
   weight_decay: 1e-5
 
 # Scheduler
-scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  T_max: ${trainer.trainer.max_epochs}
-  eta_min: 1e-6
+#scheduler:
+#  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+#  T_max: ${trainer.trainer.max_epochs}
+#  eta_min: 1e-6
 
 # Scaler for mixed precision training
 scaler:
@@ -27,10 +27,11 @@ scaler:
 
 # Loss Function
 loss:
-  _target_: monai.losses.DiceCELoss # Different from Hemoset author that used a CE Loss for N classes
+  _target_: monai.losses.DiceFocalLoss # Different from Hemoset author that used a CE Loss for N classes
   sigmoid: True
+  gamma: 1.0
   lambda_dice: 0.5
-  lambda_ce: 0.5
+  lambda_focal: 0.5
 
 # Early Stopping
 early_stopping:
