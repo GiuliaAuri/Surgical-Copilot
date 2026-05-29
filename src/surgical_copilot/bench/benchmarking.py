@@ -9,6 +9,7 @@ from hydra.utils import instantiate
 from surgical_copilot.bench.BenchmarkEngine import BenchmarkEngine
 from surgical_copilot.HemoDataset import HemosetDataSet
 from surgical_copilot.bench.perturbation import PerturbationPipelines
+from transfer_weights import load_or_create_temporal_weights
 
 @hydra.main(version_base=None, config_path="../../../configs", config_name="config") 
 def benchmarking(cfg: DictConfig):
@@ -33,6 +34,12 @@ def benchmarking(cfg: DictConfig):
         # Estraiamo e RIMUOVIAMO is_temporal dal dizionario (di default False se non specificato).
         # In questo modo Hydra non andrà in crash cercando di passarlo all' __init__ del modello.
         is_temporal_model = model_cfg.pop("is_temporal", False)
+        target_layer = model_cfg.pop("temporal_target_layer", None)
+
+        if is_temporal_model:
+            if target_layer is None:
+                print(f"[!] ERRORE FATALE: Hai impostato is_temporal=True ma manca 'temporal_target_layer' nel models.yaml per {model_key}!")
+                exit(1)
         
         # CONFIGURAZIONE DATALOADER ---
         # Per i modelli temporali autoregressivi, il batch_size DEVE essere 1
@@ -54,6 +61,15 @@ def benchmarking(cfg: DictConfig):
         # Attenzione: Usiamo 'model_cfg' (il dizionario pulito) 
         model = instantiate(model_cfg).to(device)
         
+        # istanziazione del modello temporale
+        if is_temporal_model:
+            # Passiamo la variabile estratta da Hydra e il fold corrente
+            model = load_or_create_temporal_weights(
+                model=model, 
+                fold_idx=fold, 
+                device=device,
+                target_layer_name=target_layer  
+            )
 
         # training components
         optimizer = instantiate(cfg.trainer.optimizer, params=model.parameters())

@@ -42,3 +42,4 @@ yolo_v8_seg_temporal:
   num_classes: 1
   num_masks: 32
   is_temporal: true
+  temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
