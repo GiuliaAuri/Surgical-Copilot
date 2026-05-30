@@ -11,6 +11,7 @@ from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 from surgical_copilot.bench.BenchmarkEngine import BenchmarkEngine
 from surgical_copilot.HemoDataset import HemosetDataSet
 from surgical_copilot.bench.perturbation import PerturbationPipelines
+from surgical_copilot.transfer_weights import load_or_create_temporal_weights
 
 @hydra.main(version_base=None, config_path="../../../configs", config_name="config") 
 def benchmarking(cfg: DictConfig):
@@ -27,19 +28,50 @@ def benchmarking(cfg: DictConfig):
 
     for fold in range(cfg.data.n_folds):
         print(f"\n{'#'*50}\n[*] Fold {fold+1}/{cfg.data.n_folds}\n{'#'*50}")
+       
+        # ESTRAZIONE DINAMICA DA HYDRA 
+        # Convertiamo la configurazione di Hydra del modello in un dizionario Python
+        model_cfg = OmegaConf.to_container(cfg.model[model_key], resolve=True)
+        
+        # Estraiamo e RIMUOVIAMO is_temporal dal dizionario (di default False se non specificato).
+        # In questo modo Hydra non andrà in crash cercando di passarlo all' __init__ del modello.
+        is_temporal_model = model_cfg.pop("is_temporal", False)
+        target_layer = model_cfg.pop("temporal_target_layer", None)
 
+        if is_temporal_model:
+            if target_layer is None:
+                print(f"[!] ERRORE FATALE: Hai impostato is_temporal=True ma manca 'temporal_target_layer' nel models.yaml per {model_key}!")
+                exit(1)
+        
+        # CONFIGURAZIONE DATALOADER ---
+        # Per i modelli temporali autoregressivi, il batch_size DEVE essere 1
+        b_size = 1 if is_temporal_model else OmegaConf.select(cfg, "data.batch_size", default=4)
+        num_w = OmegaConf.select(cfg, "data.num_workers", default=4)
+        
         # same loader for each model
-        train_loader, val_loader, test_loader= dataset.get_loaders(
+        train_loader, val_loader, test_loader = dataset.get_loaders(
             fold_idx=fold,
             n_splits=cfg.data.n_folds,
-            batch_size=cfg.trainer.trainer.batch_size,
-            num_workers=cfg.trainer.trainer.num_workers,
-            train_transforms=PerturbationPipelines.get_train_pipeline()
+            batch_size=b_size,                
+            num_workers=num_w,
+            train_transforms=PerturbationPipelines.get_train_pipeline(), 
+            temporal_mode=is_temporal_model   
         )
-
         print(f"\n{'='*30}\n[*] BENCHMARKING MODEL: {model_key}\n{'='*30}")
 
-        model = instantiate(cfg.model[model_key]).to(device)
+        # ISTANZIAZIONE DEL MODELLO 
+        # Attenzione: Usiamo 'model_cfg' (il dizionario pulito) 
+        model = instantiate(model_cfg).to(device)
+        
+        # istanziazione del modello temporale
+        if is_temporal_model:
+            # Passiamo la variabile estratta da Hydra e il fold corrente
+            model = load_or_create_temporal_weights(
+                model=model, 
+                fold_idx=fold, 
+                device=device,
+                target_layer_name=target_layer  
+            )
 
         # training components
         optimizer = instantiate(cfg.trainer.optimizer, params=model.parameters())
@@ -82,7 +114,8 @@ def benchmarking(cfg: DictConfig):
             loss_fn=loss_fn, 
             scaler=scaler, 
             cfg=cfg, 
-            device=device
+            device=device,
+            is_temporal=is_temporal_model  
         )
 
         if cfg.logging.wandb_enabled:

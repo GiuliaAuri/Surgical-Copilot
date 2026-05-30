@@ -10,6 +10,7 @@ from monai.metrics import DiceMetric, HausdorffDistanceMetric, MeanIoU
 from monai.transforms import Activations, AsDiscrete, Compose
 
 from surgical_copilot.bench.perturbation import PerturbationPipelines
+import os
 
 
 class BenchmarkEngine:
@@ -25,7 +26,8 @@ class BenchmarkEngine:
         scaler,
         cfg,
         device,
-        fold_idx=0
+        fold_idx=0,
+        is_temporal=False
     ):
         self.model = model.to(device)
         self.train_loader = train_loader
@@ -40,6 +42,7 @@ class BenchmarkEngine:
         self.cfg = cfg
         self.device = device
         self.fold_idx = fold_idx
+        self.is_temporal = is_temporal
 
         self.dice_metric = DiceMetric(reduction="mean")
         self.hd95_metric = HausdorffDistanceMetric(percentile=95)
@@ -69,13 +72,32 @@ class BenchmarkEngine:
         self.optimizer.zero_grad()
 
         pbar = tqdm(self.train_loader, desc="Training")
+        mask_prev = None # Inizializziamo la memoria all'inizio dell'epoca
 
         for i, batch in enumerate(pbar):
             x = batch["image"].to(self.device)
             y = batch["label"].to(self.device)
 
+            # --- INIZIO LOGICA TEMPORALE ---
+            if self.is_temporal:
+                # Recupera il flag (Monai restituisce un tensore booleano per i dati singoli)
+                is_first = batch.get("is_first_frame", [False])[0]
+                if isinstance(is_first, torch.Tensor):
+                    is_first = is_first.item()
+
+                # Se è il primo frame o la memoria è vuota, crea una maschera nera
+                if is_first or mask_prev is None:
+                    mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
+
+                # Uniamo immagine e maschera precedente (da 3 a 4 canali)
+                x_input = torch.cat([x, mask_prev], dim=1)
+            else:
+                # Baseline classica (3 canali)
+                x_input = x
+            # --- FINE LOGICA TEMPORALE ---
+
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                logits = self.model(x)
+                logits = self.model(x_input)
 
                 # manage the Deep Supervision configuration
                 if isinstance(logits, list):
@@ -84,6 +106,11 @@ class BenchmarkEngine:
                     loss = self.loss_fn(logits, y)
 
                 loss = loss / accumulation_steps
+
+            # --- AGGIORNO LA MEMORIA PER IL PROSSIMO CICLO ---
+            if self.is_temporal:
+                # TEACHER FORCING: Durante il training usiamo la maschera vera (Ground Truth) per insegnare alla rete in modo stabile. 
+                mask_prev = y.clone().detach()
 
             if self.scaler is not None:
                 self.scaler.scale(loss).backward()
@@ -121,8 +148,15 @@ class BenchmarkEngine:
         with torch.cuda.amp.autocast(enabled=self.scaler is not None):
             if self.device.type == "cuda":
                 dummy = torch.randn(1, *next(iter(self.val_loader))["image"].shape[1:]).to(self.device)
+                
+                # SE È TEMPORALE, INGRANDIAMO IL DUMMY A 4 CANALI
+                if self.is_temporal:
+                    dummy_mask = torch.zeros(1, 1, dummy.shape[2], dummy.shape[3]).to(self.device)
+                    dummy = torch.cat([dummy, dummy_mask], dim=1)
+                    
                 for _ in range(5):
                     _ = self.model(dummy)
+                    
 
         with torch.inference_mode():
             self.dice_metric.reset()
@@ -139,13 +173,24 @@ class BenchmarkEngine:
                 x = batch["image"].to(self.device)
                 y = batch["label"].to(self.device)
 
+                if self.is_temporal:
+                    is_first = batch.get("is_first_frame", [False])[0]
+                    if isinstance(is_first, torch.Tensor):
+                        is_first = is_first.item()
+                    if is_first or val_mask_prev is None:
+                        val_mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
+                    
+                    x_input = torch.cat([x, val_mask_prev], dim=1)
+                else:
+                    x_input = x
+
                 # Sincronizzazione per FPS
                 if self.device.type == "cuda":
                     torch.cuda.synchronize()
         
                 start_batch = time.perf_counter()
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                    logits = self.model(x)
+                    logits = self.model(x_input)
                 
                 if self.device.type == "cuda":
                     torch.cuda.synchronize()
@@ -157,6 +202,9 @@ class BenchmarkEngine:
                     
                 #  Deep Supervision
                 main_logits = logits[0] if isinstance(logits, list) else logits
+
+                if self.is_temporal:
+                    val_mask_prev = (torch.sigmoid(main_logits.detach()) > 0.5).float()
 
                 loss = self.loss_fn(main_logits, y)
                 val_losses.append(loss.item())
@@ -221,12 +269,22 @@ class BenchmarkEngine:
                     x = batch["image"].to(self.device)
                     y = batch["label"].to(self.device)
 
+                    if self.is_temporal:
+                        is_first = batch.get("is_first_frame", [False])[0]
+                        if isinstance(is_first, torch.Tensor):
+                            is_first = is_first.item()
+                        if is_first or test_mask_prev is None:
+                            test_mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
+                        x_input = torch.cat([x, test_mask_prev], dim=1)
+                    else:
+                        x_input = x
+
                     if self.device.type == "cuda":
                         torch.cuda.synchronize()
 
                     start_time = time.perf_counter()
 
-                    logits = self.model(x)
+                    logits = self.model(x_input)
 
                     if self.device.type == "cuda":
                         torch.cuda.synchronize()
@@ -237,6 +295,10 @@ class BenchmarkEngine:
 
                     # deep supervision handling
                     main_logits = logits[0] if isinstance(logits, list) else logits
+
+                    if self.is_temporal:
+                        test_mask_prev = (torch.sigmoid(main_logits.detach()) > 0.5).float()
+                    
                     preds = self.post_pred(main_logits)
                     labels = self.post_label(y)
 
@@ -331,15 +393,19 @@ class BenchmarkEngine:
         return best_fold_metrics
 
     def _save_checkpoint(self, fold_idx: int) -> str:
-        model_name = self.model.__class__.__name__
-        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        weights_dir = base_dir / model_name
-        weights_dir.mkdir(parents=True, exist_ok=True)
         
-        save_path = weights_dir / f"best_fold{fold_idx}.pth"
+        model_name = self.model.__class__.__name__
+        save_path = f"results/best_{model_name}_fold{self.fold_idx}.pth"
+        
+        # Crea la cartella (come faceva prima)
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        # Salva senza errori
         torch.save(self.model.state_dict(), save_path)
         
         return str(save_path)
+    
+
 
     def _log_wandb(self, epoch, train_loss, metrics):
         
