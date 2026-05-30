@@ -1,4 +1,4 @@
 root_dir: data/raw
 cache_rate: 1.0
 img_size: [640, 480]
-n_folds: 1
+n_folds: 5
