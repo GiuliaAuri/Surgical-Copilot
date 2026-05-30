@@ -43,3 +43,9 @@ yolo_v8_seg_temporal:
   num_masks: 32
   is_temporal: true
   temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
+
+yolo_late_fusion:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionConvGRU
+  in_channels: 3
+  num_classes: 1
+  num_masks: 32
