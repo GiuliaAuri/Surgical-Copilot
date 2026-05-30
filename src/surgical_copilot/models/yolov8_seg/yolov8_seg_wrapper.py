@@ -38,10 +38,16 @@ class CustomYOLOSemantic(nn.Module):
     
 
 class YOLOLateFusionConvGRU(nn.Module):
-    def __init__(self, in_channels=3, num_classes=1, num_masks=32):
+
+    def __init__(self, in_channels=3, num_classes=1, num_masks=32, freeze_backbone=False, warmup_epochs=5, pretrained_weights_path=None):
         super().__init__()
         
-        # 1. IL BACKBONE SPAZIALE (Lo YOLO standard a 3 canali)
+        # Salviamo entrambe le variabili per renderle accessibili dall'esterno
+        self.freeze_backbone = freeze_backbone
+        self.warmup_epochs = warmup_epochs
+        self.pretrained_weights_path = pretrained_weights_path
+        
+        # 1. IL BACKBONE SPAZIALE
         self.yolo = YOLOv8Segmenter(in_channels=in_channels, num_classes=num_classes, num_masks=num_masks)
         
         # 2. IL MODULO TEMPORALE (ConvGRU) 
@@ -71,5 +77,5 @@ class YOLOLateFusionConvGRU(nn.Module):
         mask_logits_full = F.interpolate(mask_logits, size=(x.shape[2], x.shape[3]), 
                                          mode='bilinear', align_corners=False)
         
-        # Restituiamo SOLO la maschera finale
-        return mask_logits_full
+        # Restituiamo una tupla: (la predizione, la memoria da conservare)
+        return mask_logits_full, coeffs_temporali

@@ -49,3 +49,6 @@ yolo_late_fusion:
   in_channels: 3
   num_classes: 1
   num_masks: 32
+  freeze_backbone: True
+  warmup_epochs: 5
+  pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
