@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 from surgical_copilot.bench.BenchmarkEngine import BenchmarkEngine
 from surgical_copilot.HemoDataset import HemosetDataSet
 from surgical_copilot.bench.perturbation import PerturbationPipelines
-from transfer_weights import load_or_create_temporal_weights
+from surgical_copilot.transfer_weights import load_or_create_temporal_weights
 
 @hydra.main(version_base=None, config_path="../../../configs", config_name="config") 
 def benchmarking(cfg: DictConfig):

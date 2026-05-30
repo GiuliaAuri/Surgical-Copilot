@@ -10,6 +10,7 @@ from monai.metrics import DiceMetric, HausdorffDistanceMetric, MeanIoU
 from monai.transforms import Activations, AsDiscrete, Compose
 
 from surgical_copilot.bench.perturbation import PerturbationPipelines
+import os
 
 
 class BenchmarkEngine:
@@ -392,15 +393,19 @@ class BenchmarkEngine:
         return best_fold_metrics
 
     def _save_checkpoint(self, fold_idx: int) -> str:
-        model_name = self.model.__class__.__name__
-        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        weights_dir = base_dir / model_name
-        weights_dir.mkdir(parents=True, exist_ok=True)
         
-        save_path = weights_dir / f"best_fold{fold_idx}.pth"
+        model_name = self.model.__class__.__name__
+        save_path = f"results/best_{model_name}_fold{self.fold_idx}.pth"
+        
+        # Crea la cartella (come faceva prima)
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        # Salva senza errori
         torch.save(self.model.state_dict(), save_path)
         
         return str(save_path)
+    
+
 
     def _log_wandb(self, epoch, train_loss, metrics):
         
