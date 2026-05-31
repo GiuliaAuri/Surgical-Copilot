@@ -64,6 +64,21 @@ class BenchmarkEngine:
 
         self._print_model_info()
 
+        # --- CARICAMENTO DINAMICO DEI PESI PER FOLD ---
+        # Verifichiamo se il modello possiede un percorso per i pesi pre-addestrati
+        weights_template = getattr(self.model, "pretrained_weights_path", None)
+        
+        if weights_template is not None:
+            actual_path = weights_template.format(fold_idx=self.fold_idx)
+            
+            if os.path.exists(actual_path) and hasattr(self.model, "yolo"):
+                # Carichiamo i pesi nel sottomodulo YOLO associandoli alla GPU corretta
+                self.model.yolo.load_state_dict(torch.load(actual_path, map_location=self.device))
+                print(f"\n[*] [CONFIG FOLD {self.fold_idx}]: Pesi spaziali caricati con successo da {actual_path}")
+            else:
+                print(f"\n[!] [CONFIG FOLD {self.fold_idx}]: Attenzione! File {actual_path} non trovato. YOLO parte da zero.")
+        # -----------------------------------------------
+
     def _train(self):
         self.model.train()
         losses = []
@@ -72,32 +87,34 @@ class BenchmarkEngine:
         self.optimizer.zero_grad()
 
         pbar = tqdm(self.train_loader, desc="Training")
-        mask_prev = None # Inizializziamo la memoria all'inizio dell'epoca
+        
+        # 1. INIZIALIZZIAMO LE MEMORIE 
+        mask_prev = None        # Memoria per Early Fusion (4 canali)
+        self.h_state = None     # Memoria per Late Fusion (ConvGRU)
 
         for i, batch in enumerate(pbar):
             x = batch["image"].to(self.device)
             y = batch["label"].to(self.device)
 
-            # --- INIZIO LOGICA TEMPORALE ---
+            # --- INIZIO LOGICA TEMPORALE (EARLY FUSION - 4 CANALI) ---
             if self.is_temporal:
-                # Recupera il flag (Monai restituisce un tensore booleano per i dati singoli)
                 is_first = batch.get("is_first_frame", [False])[0]
                 if isinstance(is_first, torch.Tensor):
                     is_first = is_first.item()
 
-                # Se è il primo frame o la memoria è vuota, crea una maschera nera
                 if is_first or mask_prev is None:
                     mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
 
-                # Uniamo immagine e maschera precedente (da 3 a 4 canali)
                 x_input = torch.cat([x, mask_prev], dim=1)
             else:
-                # Baseline classica (3 canali)
                 x_input = x
             # --- FINE LOGICA TEMPORALE ---
 
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                logits = self.model(x_input)
+                
+                # --- USIAMO LA FUNZIONE UNICA PER IL FORWARD! ---
+                # Se è la ConvGRU gestirà la memoria (self.h_state), altrimenti farà un forward normale
+                logits = self._forward_step(x_input)
 
                 # manage the Deep Supervision configuration
                 if isinstance(logits, list):
@@ -107,14 +124,13 @@ class BenchmarkEngine:
 
                 loss = loss / accumulation_steps
 
-            # --- AGGIORNO LA MEMORIA PER IL PROSSIMO CICLO ---
+            # --- AGGIORNO LA MEMORIA EARLY FUSION PER IL PROSSIMO CICLO ---
             if self.is_temporal:
-                # TEACHER FORCING: Durante il training usiamo la maschera vera (Ground Truth) per insegnare alla rete in modo stabile. 
                 mask_prev = y.clone().detach()
 
+            # --- BACKPROPAGATION E ACCUMULO ---
             if self.scaler is not None:
                 self.scaler.scale(loss).backward()
-
                 if ((i + 1) % accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
                     self.scaler.step(self.optimizer)
                     self.scaler.update()
@@ -167,6 +183,9 @@ class BenchmarkEngine:
             val_losses = []
             logged_visuals = False 
 
+            val_mask_prev = None 
+            self.h_state = None
+
             pbar = tqdm(self.val_loader, desc=f"Eval [Clean]")
             for batch_idx, batch in enumerate(pbar):
                 batch = clean_pipeline(batch)
@@ -190,7 +209,7 @@ class BenchmarkEngine:
         
                 start_batch = time.perf_counter()
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                    logits = self.model(x_input)
+                    logits = self._forward_step(x_input)
                 
                 if self.device.type == "cuda":
                     torch.cuda.synchronize()
@@ -261,6 +280,9 @@ class BenchmarkEngine:
                 total_model_time = 0.0
                 total_images = 0
 
+                test_mask_prev = None
+                self.h_state = None
+
                 pbar = tqdm(self.test_loader, desc=f"TEST [{scenario_name}]")
 
                 for batch in pbar:
@@ -284,7 +306,7 @@ class BenchmarkEngine:
 
                     start_time = time.perf_counter()
 
-                    logits = self.model(x_input)
+                    logits = self._forward_step(x_input)
 
                     if self.device.type == "cuda":
                         torch.cuda.synchronize()
@@ -352,10 +374,33 @@ class BenchmarkEngine:
 
         #if wandb.run is not None:
         #    wandb.watch(self.model, log="all", log_freq=100)
+        
+        # --- Impostazioni WARMUP: Leggiamo il numero di epoche dal modello. Se il modello non ha questo parametro (es. UNet), usa 5 come default.
+        warmup_epochs = getattr(self.model, "warmup_epochs", 5)
 
         for epoch in range(epochs):
-
             print(f"\n===== Epoch {epoch+1}/{epochs} =====")
+
+            # --- WARMUP ---
+            if getattr(self.model, "freeze_backbone", False):
+                
+                if epoch < warmup_epochs:
+                    # FASE 1: Congeliamo tutto tranne la ConvGRU
+                    for name, param in self.model.named_parameters():
+                        if "conv_gru" in name:
+                            param.requires_grad = True
+                        else:
+                            param.requires_grad = False
+                    
+                    if epoch == 0:
+                        print(f"[*] WARMUP DINAMICO: Rilevato freeze_backbone=True. YOLO congelato per {warmup_epochs} epoche.")
+                
+                elif epoch == warmup_epochs:
+                    # FASE 2: Scongeliamo tutto per il fine-tuning completo
+                    for param in self.model.parameters():
+                        param.requires_grad = True
+                    print("[*] FINE-TUNING: Warmup terminato. Rete completamente scongelata (End-to-End).")
+            # --- 
 
             # TRAIN PROCESS
             train_loss = self._train()
@@ -391,6 +436,22 @@ class BenchmarkEngine:
         print(f"Baseline | Dice: {test_metrics['baseline']['dice']:.4f} | HD95: {test_metrics['baseline']['hd95']:.4f} | IoU: {test_metrics['baseline']['iou']:.4f}")
 
         return best_fold_metrics
+    
+    def _forward_step(self, inputs):
+        """
+        Unico punto centralizzato per il passaggio dei dati nel modello.
+        Gestisce la memoria se il modello è una ConvGRU, altrimenti si comporta normalmente.
+        """
+        if "ConvGRU" in self.model.__class__.__name__:
+            # Passiamo l'input e la memoria globale della classe (self.h_state)
+            outputs, self.h_state = self.model(inputs, self.h_state)
+            # Stacchiamo i gradienti per non saturare la GPU
+            self.h_state = self.h_state.detach()
+        else:
+            # Modello standard 
+            outputs = self.model(inputs)
+            
+        return outputs
 
     def _save_checkpoint(self, fold_idx: int) -> str:
         
