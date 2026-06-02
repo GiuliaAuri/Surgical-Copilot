@@ -96,19 +96,7 @@ class BenchmarkEngine:
             x = batch["image"].to(self.device)
             y = batch["label"].to(self.device)
 
-            # --- INIZIO LOGICA TEMPORALE (EARLY FUSION - 4 CANALI) ---
-            if self.is_temporal:
-                is_first = batch.get("is_first_frame", [False])[0]
-                if isinstance(is_first, torch.Tensor):
-                    is_first = is_first.item()
-
-                if is_first or mask_prev is None:
-                    mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
-
-                x_input = torch.cat([x, mask_prev], dim=1)
-            else:
-                x_input = x
-            # --- FINE LOGICA TEMPORALE ---
+            x_input, y, mask_prev = self._prepare_inputs(batch, mask_prev)
 
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                 
@@ -173,7 +161,6 @@ class BenchmarkEngine:
                 for _ in range(5):
                     _ = self.model(dummy)
                     
-
         with torch.inference_mode():
             self.dice_metric.reset()
             self.hd95_metric.reset()
@@ -189,19 +176,9 @@ class BenchmarkEngine:
             pbar = tqdm(self.val_loader, desc=f"Eval [Clean]")
             for batch_idx, batch in enumerate(pbar):
                 batch = clean_pipeline(batch)
-                x = batch["image"].to(self.device)
-                y = batch["label"].to(self.device)
 
-                if self.is_temporal:
-                    is_first = batch.get("is_first_frame", [False])[0]
-                    if isinstance(is_first, torch.Tensor):
-                        is_first = is_first.item()
-                    if is_first or val_mask_prev is None:
-                        val_mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
-                    
-                    x_input = torch.cat([x, val_mask_prev], dim=1)
-                else:
-                    x_input = x
+                x_input, y, val_mask_prev = self._prepare_inputs(batch, val_mask_prev)
+                x = batch["image"].to(self.device) 
 
                 # Sincronizzazione per FPS
                 if self.device.type == "cuda":
@@ -288,18 +265,9 @@ class BenchmarkEngine:
                 for batch in pbar:
 
                     batch = pipeline(batch)
+                    
+                    x_input, y, test_mask_prev = self._prepare_inputs(batch, test_mask_prev)
                     x = batch["image"].to(self.device)
-                    y = batch["label"].to(self.device)
-
-                    if self.is_temporal:
-                        is_first = batch.get("is_first_frame", [False])[0]
-                        if isinstance(is_first, torch.Tensor):
-                            is_first = is_first.item()
-                        if is_first or test_mask_prev is None:
-                            test_mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
-                        x_input = torch.cat([x, test_mask_prev], dim=1)
-                    else:
-                        x_input = x
 
                     if self.device.type == "cuda":
                         torch.cuda.synchronize()
@@ -453,6 +421,31 @@ class BenchmarkEngine:
             
         return outputs
 
+    def _prepare_inputs(self, batch, mask_prev=None):
+        x = batch["image"].to(self.device)
+        y = batch["label"].to(self.device)
+
+        is_first = batch.get("is_first_frame", [False])[0]
+        if isinstance(is_first, torch.Tensor):
+            is_first = is_first.item()
+
+        # 2. Reset Universale delle memorie per cambio di video 
+        if is_first:
+            mask_prev = None     # Reset memoria spaziale (Early Fusion)
+            self.h_state = None  # Reset memoria latente (Late Fusion / ConvGRU)
+
+        if self.is_temporal:
+            # EARLY FUSION: Il modello richiede 4 canali in input
+            if mask_prev is None:
+                mask_prev = torch.zeros((x.shape[0], 1, x.shape[2], x.shape[3]), device=self.device)
+            x_input = torch.cat([x, mask_prev], dim=1)
+        else:
+            # LATE FUSION o BASELINE STATICA: Il modello richiede 3 canali in input.
+            # Se stiamo usando la ConvGRU, la temporalità è gestita internamente tramite self.h_state
+            x_input = x
+            
+        return x_input, y, mask_prev
+
     def _save_checkpoint(self, fold_idx: int) -> str:
         
         model_name = self.model.__class__.__name__
@@ -466,8 +459,6 @@ class BenchmarkEngine:
         
         return str(save_path)
     
-
-
     def _log_wandb(self, epoch, train_loss, metrics):
         
         if wandb.run is None:

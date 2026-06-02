@@ -52,3 +52,15 @@ yolo_late_fusion:
   freeze_backbone: True
   warmup_epochs: 5
   pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+
+r_unet:
+  _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
+  freeze_backbone: True
+  warmup_epochs: 5
+  pretrained_weights_path: "/homes/cmininno/cvcs2026/Surgical-Copilot/weights/Unet/best_fold0.pth"

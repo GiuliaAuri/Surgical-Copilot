@@ -6,7 +6,7 @@ defaults:
 
 model_key: null
 
-models_to_bench: ["unet", "unet_plus_plus", "swin_unet"]
+#models_to_bench: ["unet", "unet_plus_plus", "swin_unet"]
 seed: 42
 device: cuda
 debug: false
@@ -14,4 +14,4 @@ debug: false
 logging:
   project: surgical-copilot
   wandb_enabled: true
-  exp_tag: "focal_warmup"
+  exp_tag: temporal_approach
