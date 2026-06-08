@@ -4,6 +4,20 @@ import torch.nn as nn
 import torch
 import os
 
+class InjectedBottleneck(nn.Module):
+    def __init__(self, spatial_layer, parent_model):
+        super().__init__()
+        self.spatial_layer = spatial_layer
+        self.parent_model = parent_model
+        
+    def forward(self, x):
+        # 1. Feature extraction spaziale
+        x_spatial = self.spatial_layer(x)
+        # 2. Propagazione temporale
+        h_next = self.parent_model.conv_gru(x_spatial, self.parent_model.h_state)
+        self.parent_model.h_state = h_next
+        return h_next
+
 class RecurrentUNet(nn.Module):
 
     def __init__(
@@ -39,6 +53,9 @@ class RecurrentUNet(nn.Module):
         self.h_state = None
         self._is_patched = False
 
+        if pretrained_weights_path is not None:
+            self.load_spatial_weights(pretrained_weights_path, device='cpu')
+
     def load_spatial_weights(self, path, device):
         
         if os.path.exists(path):
@@ -58,24 +75,25 @@ class RecurrentUNet(nn.Module):
 
     def _inject_temporal_bottleneck(self, module):
         
-        if hasattr(module, 'submodule') and hasattr(module.submodule, 'submodule'):
-            self._inject_temporal_bottleneck(module.submodule)
-        else:
-            original_bottleneck = module.submodule
+        # Caso 1: Siamo nel nodo radice, ovvero il Sequential principale dell'UNet.
+        # Il blocco che ci interessa per scendere in profondità è all'indice 1.
+        if isinstance(module, nn.Sequential) and len(module) >= 3:
+            return self._inject_temporal_bottleneck(module[1])
             
-            class InjectedBottleneck(nn.Module):
-                def __init__(self, spatial_layer, parent_model):
-                    super().__init__()
-                    self.spatial_layer = spatial_layer
-                    self.parent_model = parent_model
-                    
-                def forward(self, x):
-                    x_spatial = self.spatial_layer(x)
-                    h_next = self.parent_model.conv_gru(x_spatial, self.parent_model.h_state)
-                    self.parent_model.h_state = h_next
-                    return h_next
+        # Caso 2: Siamo all'interno di una SkipConnection.
+        if hasattr(module, 'submodule'):
+            # Se il sottomodulo è un Sequential, non siamo ancora sul fondo.
+            # In MONAI, l'indice [1] di questo contenitore è la SkipConnection successiva.
+            if isinstance(module.submodule, nn.Sequential):
+                return self._inject_temporal_bottleneck(module.submodule[1])
             
-            module.submodule = InjectedBottleneck(original_bottleneck, self)
+            # Se non è un Sequential, abbiamo raggiunto il vero bottleneck (il ResidualUnit).
+            else:
+                original_bottleneck = module.submodule 
+                module.submodule = InjectedBottleneck(original_bottleneck, self)
+                return True
+                
+        return False
 
     def forward(self, x, h_prev=None):
         
