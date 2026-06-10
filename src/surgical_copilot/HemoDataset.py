@@ -155,26 +155,19 @@ class HemosetDataSet:
 
         return train_loader, val_loader, test_loader
 
-    def get_sample(self, split="train", index=None, patient_id=None, transform=True):
-
-        patients = sorted(list(self.patient_data.keys()))
-        temp_rng = random.Random(42) 
-        temp_rng.shuffle(patients)
-
-        split_idx = int(0.8 * len(patients))
-        train_patients = patients[:split_idx]
-        val_patients = patients[split_idx:]
-
-        selected_patients = train_patients if split == "train" else val_patients
-
+    def get_sample(self, patient_id=None, index=None, transform=True):
+    
         if patient_id:
-            if patient_id not in selected_patients:
-                raise ValueError(f"{patient_id} non è nello split {split}")
+            if patient_id not in self.patient_data:
+                raise ValueError(f"{patient_id} non esiste nel dataset")
             files = self.patient_data[patient_id]
         else:
             files = []
-            for p in selected_patients:
+            for p in self.patient_data.keys():
                 files.extend(self.patient_data[p])
+
+        if not files:
+            raise RuntimeError("Nessun sample disponibile.")
 
         if index is None:
             sample = random.choice(files)

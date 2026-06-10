@@ -11,44 +11,44 @@ from monai.transforms import (
     MapTransform
 )
 
+
 class RandSpecularReflectiond(MapTransform):
-    
-    def __init__(self, keys, prob=0.1, intensity=0.1, blob_size=16, allow_missing_keys=False):
-        super().__init__(keys, allow_missing_keys)
+    def __init__(self, keys, prob=0.2, intensity=0.5, sigma_range=(0.05, 0.15)):
+        super().__init__(keys)
         self.prob = prob
         self.intensity = intensity
-        self.blob_size = blob_size
+        self.sigma_range = sigma_range
 
     def __call__(self, data):
         d = dict(data)
         for key in self.key_iterator(d):
             if torch.rand(1).item() < self.prob:
-                x = d[key]
+                img = d[key]
+                C, H, W = img.shape[-3:]
                 
-                if x.ndim == 4:
-                    B, C, H, W = x.shape
-                elif x.ndim == 3:
-                    B = 1
-                    C, H, W = x.shape
-                else:
-                    continue
-
-                small_h, small_w = max(1, H // self.blob_size), max(1, W // self.blob_size)
-                noise = torch.rand((1, 1, small_h, small_w), device=x.device, dtype=x.dtype)
+                # 1. Genera coordinate casuali per il centro del riflesso
+                center_y, center_x = torch.rand(2) * H, torch.rand(2) * W
                 
-                blobby_noise = F.interpolate(noise, size=(H, W), mode='bicubic', align_corners=False).squeeze(0)
+                # 2. Crea una mappa di calore (Gaussiana) ellittica
+                y = torch.linspace(0, H - 1, H)
+                x = torch.linspace(0, W - 1, W)
+                grid_y, grid_x = torch.meshgrid(y, x, indexing='ij')
                 
-                threshold = 1.0 - (self.intensity * 0.5)
-                soft_mask = torch.clamp((blobby_noise - threshold) / (1.0 - threshold), 0, 1) ** 3
-
-                color_tint = torch.tensor([1.0, 
-                                           1.0 - torch.rand(1).item() * 0.1, 
-                                           1.0 - torch.rand(1).item() * 0.2], 
-                                          device=x.device).view(3, 1, 1)
+                # Variabilità nella forma dell'ellisse
+                sigma_y = torch.rand(1).uniform_(*self.sigma_range) * H
+                sigma_x = torch.rand(1).uniform_(*self.sigma_range) * W
                 
-                reflection_color = x.max() * color_tint
-                d[key] = torch.clamp((1.0 - soft_mask) * x + soft_mask * reflection_color, 0, 1)
+                gaussian = torch.exp(-(((grid_y - center_y)**2 / (2 * sigma_y**2)) + 
+                                       ((grid_x - center_x)**2 / (2 * sigma_x**2))))
                 
+                # 3. Normalizza e applica intensità
+                specular_mask = (gaussian / gaussian.max()) * self.intensity
+                
+                # 4. Applica il riflesso (Additive blending)
+                # Usiamo min(1, img + mask) per evitare clipping brutale 
+                # e simulare la saturazione del sensore
+                d[key] = torch.clamp(img + specular_mask, 0, 1)
+        
         return d
 
 class RandSurgicalSmoked(MapTransform):
