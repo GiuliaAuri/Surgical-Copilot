@@ -38,10 +38,11 @@ yolo_v8_seg:
 
 yolo_v8_seg_temporal:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
-  in_channels: 4   # 3 canali RGB + 1 canale della Maschera t-1
+  in_channels: 4   # 3 channels RGB + 1 mask t-1 channel
   num_classes: 1
   num_masks: 32
   is_temporal: true
+  temporal_mode: "early_fusion"
   temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
 
 yolo_late_fusion:
@@ -50,17 +51,37 @@ yolo_late_fusion:
   num_classes: 1
   num_masks: 32
   freeze_backbone: True
+  is_temporal: true
+  temporal_mode: "recurrent"
   warmup_epochs: 5
   pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
 
-r_unet:
+r_unet_gru:
   _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
   spatial_dims: 2
   in_channels: 3
   out_channels: 1
   channels: [32, 64, 128, 256, 512]
   strides: [2, 2, 2, 2]
+  recurrent_type: "gru"
   num_res_units: 2
   freeze_backbone: True
+  is_temporal: true
+  temporal_mode: "recurrent"
   warmup_epochs: 5
-  pretrained_weights_path: "/homes/cmininno/cvcs2026/Surgical-Copilot/weights/Unet/best_fold0.pth"
+  pretrained_weights_path: "weights/Unet/best_fold0.pth"
+
+r_unet_lstm:
+  _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  recurrent_type: "lstm"
+  num_res_units: 2
+  freeze_backbone: True
+  is_temporal: true
+  temporal_mode: "recurrent"
+  warmup_epochs: 5
+  pretrained_weights_path: "weights/Unet/best_fold0.pth"

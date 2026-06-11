@@ -14,4 +14,4 @@ debug: false
 logging:
   project: surgical-copilot
   wandb_enabled: true
-  exp_tag: temporal_approach
+  exp_tag: TemporalBench

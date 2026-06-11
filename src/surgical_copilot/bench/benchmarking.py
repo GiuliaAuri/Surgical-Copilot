@@ -143,9 +143,11 @@ def benchmarking(cfg: DictConfig):
     
     dice_list = [x["dice"] for x in all_fold_metrics]
     hd95_list = [x["hd95"] for x in all_fold_metrics]
+    iou_list = [x["iou"] for x in all_fold_metrics]
 
     mean_dice, std_dice = np.mean(dice_list), np.std(dice_list)
     mean_hd95, std_hd95 = np.mean(hd95_list), np.std(hd95_list)
+    mean_iou, std_iou = np.mean(iou_list), np.std(iou_list)
 
     if cfg.logging.wandb_enabled:
         wandb.init(
@@ -158,12 +160,14 @@ def benchmarking(cfg: DictConfig):
             "mean_dice": mean_dice,
             "std_dice": std_dice,
             "mean_hd95": mean_hd95,
-            "std_hd95": std_hd95
+            "std_hd95": std_hd95,
+            "mean_iou": mean_iou,
+            "std_iou": std_iou
         })
         wandb.finish()
 
     print("\n" + "=" * 80)
-    print(f"FINAL RESULTS | Dice: {mean_dice:.4f} ± {std_dice:.4f} | HD95: {mean_hd95:.4f} ± {std_hd95:.4f}")
+    print(f"FINAL RESULTS | \n Dice: {mean_dice:.4f} ± {std_dice:.4f} | HD95: {mean_hd95:.4f} ± {std_hd95:.4f} | IoU: {mean_iou:.4f} ± {std_iou:.4f}")
     print("=" * 80)
 
 if __name__ == "__main__":
