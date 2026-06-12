@@ -45,14 +45,27 @@ yolo_v8_seg_temporal:
   temporal_mode: "early_fusion"
   temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
 
-yolo_late_fusion:
-  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionConvGRU
+yolo_late_fusion_gru:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
   in_channels: 3
   num_classes: 1
   num_masks: 32
+  recurrent_type: "gru"
+  is_temporal: true            
+  temporal_mode: "recurrent"     
   freeze_backbone: True
-  is_temporal: true
+  warmup_epochs: 5
+  pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+
+yolo_late_fusion_lstm:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
+  in_channels: 3
+  num_classes: 1
+  num_masks: 32
+  recurrent_type: "lstm"   
+  is_temporal: true            
   temporal_mode: "recurrent"
+  freeze_backbone: True
   warmup_epochs: 5
   pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
 

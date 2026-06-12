@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from surgical_copilot.models.yolov8_seg import YOLOv8Segmenter 
-from surgical_copilot.models.yolov8_seg.conv_gru import ConvGRUCell
+from surgical_copilot.models.conv_gru import ConvGRUCell
+from surgical_copilot.models.conv_lstm import ConvLSTMCell
 
 class CustomYOLOSemantic(nn.Module):
     def __init__(self, in_channels=3, num_classes=1, num_masks=32):
@@ -37,45 +38,52 @@ class CustomYOLOSemantic(nn.Module):
         return mask_logits_full
     
 
-class YOLOLateFusionConvGRU(nn.Module):
+class YOLOLateFusionTemporal(nn.Module):
 
-    def __init__(self, in_channels=3, num_classes=1, num_masks=32, freeze_backbone=False, warmup_epochs=5, pretrained_weights_path=None):
+    def __init__(self, in_channels=3, num_classes=1, num_masks=32, recurrent_type="gru", freeze_backbone=False, warmup_epochs=5, pretrained_weights_path=None):
         super().__init__()
         
         # Salviamo entrambe le variabili per renderle accessibili dall'esterno
         self.freeze_backbone = freeze_backbone
         self.warmup_epochs = warmup_epochs
         self.pretrained_weights_path = pretrained_weights_path
+        self.recurrent_type = recurrent_type.lower()
         
         # 1. IL BACKBONE SPAZIALE
         self.yolo = YOLOv8Segmenter(in_channels=in_channels, num_classes=num_classes, num_masks=num_masks)
         
         # 2. IL MODULO TEMPORALE (ConvGRU) 
-        self.conv_gru = ConvGRUCell(input_dim=32, hidden_dim=32)
+        if self.recurrent_type == "gru":
+            self.temporal_cell = ConvGRUCell(input_dim=32, hidden_dim=32)
+        elif self.recurrent_type == "lstm":
+            self.temporal_cell = ConvLSTMCell(in_channels=32, hidden_channels=32, kernel_size=3)
+        
 
     def forward(self, x, h_prev=None):
         """
         x: Immagine RGB [B, 3, H, W]
         h_prev: Lo stato nascosto (memoria) del frame precedente [B, 32, H/8, W/8]
         """
-        # 1. YOLO elabora l'immagine (Spazio)
+        # 1. Spazio
         classes, coeffs, protos = self.yolo(x)
         
-        # 2. La ConvGRU elabora i coefficienti guardando il passato (Tempo)
-        coeffs_temporali = self.conv_gru(coeffs, h_prev)
-        
-        # 3. SEGMENTAZIONE FINALE 
-        # Ingrandiamo i coefficienti temporali
-        coeffs_up = F.interpolate(coeffs_temporali, size=(protos.shape[2], protos.shape[3]), 
+        # 2. Tempo (Gestione differenziata dei ritorni)
+        if self.recurrent_type == "gru":
+            # La GRU restituisce solo 1 tensore
+            state_next = self.temporal_cell(coeffs, h_prev)
+            h_next = state_next 
+        elif self.recurrent_type == "lstm":
+            # La LSTM restituisce una tupla (H, C)
+            h_next, c_next = self.temporal_cell(coeffs, h_prev)
+            state_next = (h_next, c_next)
+            
+        # 3. Maschera (Usiamo SEMPRE h_next, che sia uscito dalla GRU o dalla LSTM)
+        coeffs_up = F.interpolate(h_next, size=(protos.shape[2], protos.shape[3]), 
                                   mode='bilinear', align_corners=False)
         
-        # Moltiplichiamo per i prototipi per ottenere la maschera finale
         mask_logits = torch.einsum('bchw,bchw->bhw', coeffs_up, protos).unsqueeze(1)
-        
-        
-        # Riportiamo la maschera alla grandezza originale dell'immagine
         mask_logits_full = F.interpolate(mask_logits, size=(x.shape[2], x.shape[3]), 
                                          mode='bilinear', align_corners=False)
         
-        # Restituiamo una tupla: (la predizione, la memoria da conservare)
-        return mask_logits_full, coeffs_temporali
+        # Restituisce logit e lo stato (che sarà singolo per GRU o tupla per LSTM)
+        return mask_logits_full, state_next
