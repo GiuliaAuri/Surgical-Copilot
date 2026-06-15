@@ -55,6 +55,7 @@ yolo_late_fusion_gru:
   temporal_mode: "recurrent"     
   freeze_backbone: True
   warmup_epochs: 5
+  temporal_target_layer: "yolo.backbone.stem.conv.weight"
   pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
 
 yolo_late_fusion_lstm:
@@ -66,7 +67,8 @@ yolo_late_fusion_lstm:
   is_temporal: true            
   temporal_mode: "recurrent"
   freeze_backbone: True
-  warmup_epochs: 5
+  warmup_epochs: 1 #5
+  temporal_target_layer: "yolo.backbone.stem.conv.weight"
   pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
 
 r_unet_gru:

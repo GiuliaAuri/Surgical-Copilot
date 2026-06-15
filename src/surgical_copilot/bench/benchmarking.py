@@ -8,7 +8,7 @@ from hydra.utils import instantiate
 
 from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
-from surgical_copilot.bench.BenchmarkEngine import BenchmarkEngine
+from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
 from surgical_copilot.HemoDataset import HemosetDataSet
 from surgical_copilot.bench.perturbation import PerturbationPipelines
 from surgical_copilot.transfer_weights import load_or_create_temporal_weights

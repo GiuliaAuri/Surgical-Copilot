@@ -9,7 +9,7 @@ class WandbLogger:
         self.is_active = wandb.run is not None
 
     def _print_model_info(self, model, device):
-        n_params = sum(p.numel() for p in mdel.parameters())
+        n_params = sum(p.numel() for p in model.parameters())
 
         print("\n" + "=" * 60)
         print("SURGICAL COPILOT - BENCHMARK ENGINE")

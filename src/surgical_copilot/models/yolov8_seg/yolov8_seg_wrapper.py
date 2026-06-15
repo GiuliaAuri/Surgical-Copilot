@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from surgical_copilot.models.yolov8_seg import YOLOv8Segmenter 
+from surgical_copilot.models.yolov8_seg.yolov8_seg import YOLOv8Segmenter 
 from surgical_copilot.models.conv_gru import ConvGRUCell
 from surgical_copilot.models.conv_lstm import ConvLSTMCell
 
