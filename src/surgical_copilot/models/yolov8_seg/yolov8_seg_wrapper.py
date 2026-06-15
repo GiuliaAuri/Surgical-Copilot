@@ -28,7 +28,7 @@ class CustomYOLOSemantic(nn.Module):
         # Prodotto scalare spaziale: moltiplichiamo pixel-per-pixel e sommiamo i 32 canali.
         # Questo fonde le maschere astratte creando la maschera del sangue!
         # Risultato: [B, 1, H/4, W/4]
-        mask_logits = torch.sum(coeffs_up * protos, dim=1, keepdim=True)
+        mask_logits = torch.einsum('bchw,bchw->bhw', coeffs_up, protos).unsqueeze(1)
         
         # 3. Riportiamo la maschera alla risoluzione originale dell'immagine (es. 640x640)
         mask_logits_full = F.interpolate(mask_logits, size=(x.shape[2], x.shape[3]), 
