@@ -33,3 +33,6 @@ einops==0.7.0
 timm==0.4.12
 yacs==0.1.8
 ml-collections==0.1.1
+
+# --- Segmentation Models PyTorch (SMP) ---
+segmentation-models-pytorch>=0.3.3
