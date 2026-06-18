@@ -50,23 +50,34 @@ class WandbLogger:
         wandb.log(log_dict)
 
     def log_test_metrics(self, metrics: dict):
+
         if not self.is_active:
             return
 
-        test_log_dict = {
-            "Test_Baseline/Dice": metrics["baseline"]["dice"],
-            "Test_Baseline/HD95": metrics["baseline"]["hd95"],
-            "Test_Baseline/IoU": metrics["baseline"]["iou"],
-            "Test_System/Inference_FPS": metrics["baseline"].get("inference_fps", 0.0),
-        }
+        columns = ["Scenario", "Dice", "HD95", "IoU", "Inference_FPS", "Drop (%)"]
+        table = wandb.Table(columns=columns)
+
+        table.add_data(
+            "baseline (clean)",
+            round(metrics["baseline"]["dice"], 4),
+            round(metrics["baseline"]["hd95"], 2),
+            round(metrics["baseline"]["iou"], 4),
+            round(metrics["baseline"].get("inference_fps", 0.0), 2),
+            0.0
+        )
 
         for scenario, scores in metrics.get("stress", {}).items():
-            test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores["dice"]
-            test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores["hd95"]
-            test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores["iou"]
-            test_log_dict[f"Test_Stress_Drop/{scenario}"] = scores["drop"]
+            drop_val = scores.get("drop_percent", scores.get("drop", 0.0) * 100)
+            table.add_data(
+                scenario,
+                round(scores["dice"], 4),
+                round(scores["hd95"], 2),
+                round(scores["iou"], 4),
+                round(scores.get("inference_fps", 0.0), 2),
+                round(drop_val, 2)
+            )
 
-        wandb.log(test_log_dict)
+        wandb.log({"Test/Performance_Table": table})
 
     def log_qualitative_masks(self, images: torch.Tensor, labels: torch.Tensor, preds: torch.Tensor, scenario_name: str, epoch: int, max_samples: int = 4):
         if not self.is_active:

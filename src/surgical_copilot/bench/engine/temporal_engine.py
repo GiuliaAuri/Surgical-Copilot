@@ -3,6 +3,8 @@ import numpy as np
 
 from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
 from surgical_copilot.bench.engine.temporal_mode import TemporalMode
+from surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
+from surgical_copilot.bench.metrics.temporal_metrics.inter_frame import InterFrameTemporalMetric
 
 
 class TemporalBenchmarkEngine(BenchmarkEngine):
@@ -10,7 +12,6 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
     def __init__(self, *args, temporal_mode=TemporalMode.NONE, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # forza Enum
         if isinstance(temporal_mode, str):
             temporal_mode = TemporalMode(temporal_mode)
 
@@ -20,14 +21,25 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self.recurrent_state = None
         self.mask_prev = None
 
-        self.temporal_metrics = TemporalVariationMetric()
-   
-    def _reset_temporal_memory(self):
+        self.temporal_metrics = {
+            "consistency": TemporalConsistencyMetric(),
+            "interframe": InterFrameTemporalMetric()
+        }
+    
+    def _reset_temporal_state(self):
         self.recurrent_state = None
         self.mask_prev = None
-        self.temporal_metrics.reset()
 
-    def _prepare_inputs(self, batch, mask_prev=None):
+    def _reset_temporal_metrics(self):
+        
+        for metric in self.temporal_metrics.values():
+            metric.reset()
+    
+    def _reset_all(self):
+        self._reset_temporal_state()
+        self._reset_temporal_metrics()
+
+    def _prepare_inputs(self, batch):
 
         x, y = super()._prepare_inputs(batch)
 
@@ -37,7 +49,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             is_first = is_first.item()
 
         if is_first:
-            self._reset_temporal_memory()
+            self._reset_temporal_state()
 
         # EARLY FUSION
         if self.temporal_mode == TemporalMode.EARLY_FUSION:
@@ -55,7 +67,9 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
     def _update_metrics(self, preds, labels):
     
         super()._update_metrics(preds, labels)
-        self.temporal_metrics(preds, labels)
+
+        self.temporal_metrics["consistency"](preds, labels)
+        self.temporal_metrics["interframe"](preds)
 
     def _forward_step(self, x):
 
@@ -84,24 +98,31 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             self.mask_prev = (torch.sigmoid(logits.detach()) > 0.5).float()
     
     def _train(self):
-        self._reset_temporal_memory()
+        self._reset_all()
         return super()._train()
 
     def _validate(self, epoch: int):
-        self._reset_temporal_memory()
+        self._reset_all()
+
         metrics = super()._validate(epoch)
         
-        temp_scores = self.temporal_metrics.aggregate()
-        metrics["baseline"].update(temp_scores)
+        temp = {
+            **self.temporal_metrics["consistency"].aggregate(),
+            **self.temporal_metrics["interframe"].aggregate()
+        }
+        metrics["baseline"].update(temp)
         
         return metrics
 
     def _test(self):
-        self._reset_temporal_memory()
+        self._reset_all()
         metrics = super()._test()
         
-        temp_scores = self.temporal_metrics.aggregate()
-        metrics["baseline"].update(temp_scores)
+        temp = {
+            **self.temporal_metrics["consistency"].aggregate(),
+            **self.temporal_metrics["interframe"].aggregate()
+        }
+        metrics["baseline"].update(temp)
         
         return metrics
     

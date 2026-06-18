@@ -77,20 +77,22 @@ class HemosetDataSet:
 
         if n_splits > len(patients):
             raise ValueError("n_splits > numero di pig")
-
-        patients = patients.copy()
-        self.rng.shuffle(patients)
         
+        groups = patients
+        patients = patients.copy()
+        
+        gkf = GroupKFold(n_splits=n_splits)
 
-        kf = KFold(
-            n_splits=n_splits,
-            shuffle=False
-        )
-        folds = list(kf.split(patients))
+        folds = list(
+                gkf.split(
+                    X=patients,
+                    y=None,
+                    groups=groups
+                )
+            )
 
         if fold_idx >= len(folds):
             raise ValueError(f"fold_idx deve essere < {n_splits}")
-
 
         train_val_idx, test_idx = folds[fold_idx]
 
@@ -104,10 +106,7 @@ class HemosetDataSet:
             for i in test_idx
         ]
 
-        val_size = max(
-            1,
-            int(0.25 * len(train_val_patients))
-        )
+        val_size = max(1, int(0.25 * len(train_val_patients)))
 
         val_patients = train_val_patients[-val_size:]
         train_patients = train_val_patients[:-val_size]
