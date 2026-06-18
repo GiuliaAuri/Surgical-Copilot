@@ -1,19 +1,13 @@
-unet:
-  _target_: monai.networks.nets.UNet
-  spatial_dims: 2
-  in_channels: 3
-  out_channels: 1
-  channels: [32, 64, 128, 256, 512]
-  strides: [2, 2, 2, 2]
-  num_res_units: 2
+# ==============================================================================
+# MODELLI BASELINE
+# ==============================================================================
 
-unet_plus_plus:
-  _target_: monai.networks.nets.BasicUNetPlusPlus
-  spatial_dims: 2
+unet_plus_plus_resnet18:
+  _target_: surgical_copilot.models.segmentation_smp.SMPUNetPlusPlus
+  encoder_name: "resnet18"
+  encoder_weights: "imagenet"
   in_channels: 3
-  out_channels: 1
-  features: [32, 64, 128, 256, 512, 32]
-  deep_supervision: False
+  classes: 1
 
 swin_unet:
     _target_: surgical_copilot.models.vision_trasformer_swin.swin_unet.SwinUnet 
@@ -31,25 +25,29 @@ swin_unetr:
     spatial_dims: 2 # generally SwinUNETR is used with 3D image. In this way we can manage 2D frame
     use_checkpoint: True
 
-yolo_v8_seg:
+# ==============================================================================
+# MODELLI YOLOv8 e le varianti
+# ==============================================================================
+
+# BASELINE 
+yolo_v8_baseline:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
   num_classes: 1
   num_masks: 32
+  # default in_channels è 3
 
-# ==============================================================================
-#  MODELLI TEMPORALI
-# ==============================================================================
-
-yolo_v8_seg_temporal:
+# EARLY FUSION YOLO (4 Canali)
+yolo_v8_early_fusion:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
-  in_channels: 4   # 3 channels RGB + 1 mask t-1 channel
+  in_channels: 4
   num_classes: 1
   num_masks: 32
   is_temporal: true
   temporal_mode: "early_fusion"
   temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
 
-yolo_late_fusion_gru:
+# LATE FUSION YOLO - NO WARM START (Addestrato da zero)
+yolo_v8_late_fusion_scratch:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
   in_channels: 3
   num_classes: 1
@@ -57,58 +55,55 @@ yolo_late_fusion_gru:
   recurrent_type: "gru"
   is_temporal: true            
   temporal_mode: "recurrent"     
-  freeze_backbone: True
-  warmup_epochs: 5
-  temporal_target_layer: "yolo.backbone.stem.conv.weight"
-  pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+  freeze_backbone: False
+  warmup_epochs: 0
 
-yolo_late_fusion_lstm:
+# LATE FUSION YOLO - WARM START (Usa i pesi della Baseline)
+yolo_v8_late_fusion_warm:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
   in_channels: 3
   num_classes: 1
   num_masks: 32
-  recurrent_type: "lstm"   
+  recurrent_type: "gru"
   is_temporal: true            
   temporal_mode: "recurrent"
   freeze_backbone: True
+  temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
   warmup_epochs: 5
-  temporal_target_layer: "yolo.backbone.stem.conv.weight"
-  pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+  pretrained_weights_path: "weights/yolo_v8_baseline/best_fold{fold_idx}.pth"
 
-r_unet_gru:
-  _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
-  spatial_dims: 2
+# LATE FUSION YOLO - NO WARM START (LSTM addestrato da zero)
+yolo_v8_late_fusion_lstm_scratch:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
   in_channels: 3
-  out_channels: 1
-  channels: [32, 64, 128, 256, 512]
-  strides: [2, 2, 2, 2]
-  recurrent_type: "gru"
-  num_res_units: 2
-  freeze_backbone: True
-  is_temporal: true
-  temporal_mode: "recurrent"
-  warmup_epochs: 5
-  pretrained_weights_path: "weights/Unet/best_fold0.pth"
+  num_classes: 1
+  num_masks: 32
+  recurrent_type: "lstm"  
+  is_temporal: true            
+  temporal_mode: "recurrent"     
+  freeze_backbone: False
+  warmup_epochs: 0
 
-r_unet_lstm:
-  _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
-  spatial_dims: 2
+# LATE FUSION YOLO - WARM START (LSTM con pesi della Baseline)
+yolo_v8_late_fusion_lstm_warm:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
   in_channels: 3
-  out_channels: 1
-  channels: [32, 64, 128, 256, 512]
-  strides: [2, 2, 2, 2]
-  recurrent_type: "lstm"
-  num_res_units: 2
-  freeze_backbone: True
-  is_temporal: true
+  num_classes: 1
+  num_masks: 32
+  recurrent_type: "lstm"  
+  is_temporal: true            
   temporal_mode: "recurrent"
+  freeze_backbone: True
+  temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
   warmup_epochs: 5
-  pretrained_weights_path: "weights/Unet/best_fold0.pth"
+  pretrained_weights_path: "weights/yolo_v8_baseline/best_fold{fold_idx}.pth"
+
 
 # ==============================================================================
-# MODELLI SMP CON ENCODER RESNET18 PRE-ADDESTRATO SU IMAGENET
+# UNET e tutte le varianti
 # ==============================================================================
 
+# BASELINE 
 unet_resnet18:
   _target_: surgical_copilot.models.segmentation_smp.SMPUNet
   encoder_name: "resnet18"
@@ -116,15 +111,34 @@ unet_resnet18:
   in_channels: 3
   classes: 1
 
-unet_plus_plus_resnet18:
-  _target_: surgical_copilot.models.segmentation_smp.SMPUNetPlusPlus
+# EARLY FUSION (4 Canali: RGB + Maschera t-1)
+early_fusion_unet_resnet18:
+  _target_: surgical_copilot.models.segmentation_smp.SMPUNet
+  encoder_name: "resnet18"
+  encoder_weights: "imagenet"
+  in_channels: 4 # <-- 3 RGB + 1 Maschera
+  classes: 1
+  is_temporal: true
+  temporal_mode: "early_fusion"
+  temporal_target_layer: "model.encoder.conv1.weight" # Copia i pesi da 3 a 4 canali
+
+# LATE FUSION - NO WARM START (R-UNet addestrata da zero)
+r_unet_resnet18_gru_scratch:
+  _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
   in_channels: 3
   classes: 1
+  recurrent_type: "gru"
+  bottleneck_dim: 512
+  freeze_backbone: False # Senza warm-start, addestriamo tutto end-to-end subito
+  is_temporal: true
+  temporal_mode: "recurrent"
+  warmup_epochs: 0
+  # NOTA: Niente pretrained_weights_path, parte da zero
 
-
-r_unet_resnet18_gru:
+# LATE FUSION - WARM START (R-UNet con pesi della Baseline) con GRU
+r_unet_resnet18_gru_warm:
   _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
@@ -137,9 +151,24 @@ r_unet_resnet18_gru:
   temporal_mode: "recurrent"
   temporal_target_layer: "model.encoder.conv1.weight"
   warmup_epochs: 5
-  pretrained_weights_path: "weights/unet_resnet18/best_fold{fold_idx}.pth"
+  pretrained_weights_path: "weights/unet_resnet18/best_fold{fold_idx}.pth" # <-- Usa la Baseline
 
-r_unet_resnet18_lstm:
+# LATE FUSION - NO WARM START con LSTM (addestrata da zero)
+r_unet_resnet18_lstm_scratch:
+  _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+  encoder_name: "resnet18"
+  encoder_weights: "imagenet"
+  in_channels: 3
+  classes: 1
+  recurrent_type: "lstm"
+  bottleneck_dim: 512
+  freeze_backbone: False
+  is_temporal: true
+  temporal_mode: "recurrent"
+  warmup_epochs: 0
+
+# LATE FUSION - WARM START con LSTM
+r_unet_resnet18_lstm_warm:
   _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"

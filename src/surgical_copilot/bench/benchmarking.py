@@ -9,6 +9,8 @@ from hydra.utils import instantiate
 from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
 from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
+from surgical_copilot.bench.engine.temporal_engine import TemporalBenchmarkEngine 
+from surgical_copilot.bench.engine.temporal_mode import TemporalMode
 from surgical_copilot.HemoDataset import HemosetDataSet
 from surgical_copilot.bench.perturbation import PerturbationPipelines
 from surgical_copilot.transfer_weights import load_or_create_temporal_weights
@@ -104,19 +106,18 @@ def benchmarking(cfg: DictConfig):
         scaler = instantiate(cfg.trainer.scaler)
 
         # training engine
-        engine = BenchmarkEngine(
-            model=model, 
-            train_loader=train_loader, 
-            val_loader=val_loader, 
-            test_loader=test_loader,
-            optimizer=optimizer, 
-            scheduler=scheduler, 
-            loss_fn=loss_fn, 
-            scaler=scaler, 
-            cfg=cfg, 
-            device=device,
-            is_temporal=is_temporal_model  
-        )
+        if is_temporal_model:
+            engine = TemporalBenchmarkEngine(
+                model=model, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+                optimizer=optimizer, scheduler=scheduler, loss_fn=loss_fn, scaler=scaler, cfg=cfg, 
+                device=device, is_temporal=True, temporal_mode=TemporalMode.RECURRENT, fold_idx=fold  
+            )
+        else:
+            engine = BenchmarkEngine(
+                model=model, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+                optimizer=optimizer, scheduler=scheduler, loss_fn=loss_fn, scaler=scaler, cfg=cfg, 
+                device=device, is_temporal=False, fold_idx=fold  
+            )
 
         if cfg.logging.wandb_enabled:
             resolved_cfg = OmegaConf.to_container(cfg, resolve=True)
@@ -144,10 +145,12 @@ def benchmarking(cfg: DictConfig):
     dice_list = [x["dice"] for x in all_fold_metrics]
     hd95_list = [x["hd95"] for x in all_fold_metrics]
     iou_list = [x["iou"] for x in all_fold_metrics]
+    tc_list = [x.get("temporal_consistency_iou") for x in all_fold_metrics if "temporal_consistency_iou" in x]
 
     mean_dice, std_dice = np.mean(dice_list), np.std(dice_list)
     mean_hd95, std_hd95 = np.mean(hd95_list), np.std(hd95_list)
     mean_iou, std_iou = np.mean(iou_list), np.std(iou_list)
+
 
     if cfg.logging.wandb_enabled:
         wandb.init(
@@ -156,18 +159,27 @@ def benchmarking(cfg: DictConfig):
             job_type="final_stats", 
             name=f"{model_key}_summary",
         )
-        wandb.log({
+        summary_stats = {
             "mean_dice": mean_dice,
             "std_dice": std_dice,
             "mean_hd95": mean_hd95,
             "std_hd95": std_hd95,
             "mean_iou": mean_iou,
             "std_iou": std_iou
-        })
+        }
+        
+        if tc_list:
+            summary_stats["mean_tc_iou"] = float(np.mean(tc_list))
+            summary_stats["std_tc_iou"] = float(np.std(tc_list))
+
+        wandb.log(summary_stats)
         wandb.finish()
 
+    
     print("\n" + "=" * 80)
     print(f"FINAL RESULTS | \n Dice: {mean_dice:.4f} ± {std_dice:.4f} | HD95: {mean_hd95:.4f} ± {std_hd95:.4f} | IoU: {mean_iou:.4f} ± {std_iou:.4f}")
+    if tc_list:
+        print(f" Temporal Consistency (TC-IoU): {np.mean(tc_list):.4f} ± {np.std(tc_list):.4f}")
     print("=" * 80)
 
 if __name__ == "__main__":

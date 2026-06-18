@@ -35,6 +35,7 @@ class WandbLogger:
 
             "Metric_Temporal_Var/IoU": metrics["baseline"].get("temporal_iou", 0.0),
             "Metric_Temporal_Var/Dice": metrics["baseline"].get("temporal_dice", 0.0),
+            "Metric_Temporal_Var/TC_IoU": metrics["baseline"].get("temporal_consistency_iou", 0.0),
         }
 
         for scenario, scores in metrics.get("stress", {}).items():
@@ -45,7 +46,7 @@ class WandbLogger:
             if "temporal_iou" in scores:
                 log_dict[f"Metric_Temporal_Var_IoU/Stress_{scenario}"] = scores["temporal_iou"]
                 log_dict[f"Metric_Temporal_Var_Dice/Stress_{scenario}"] = scores["temporal_dice"]
-
+                log_dict[f"Metric_Temporal_Var/TC_IoU/Stress_{scenario}"] = scores["temporal_consistency_iou"]
         wandb.log(log_dict)
 
     def log_test_metrics(self, metrics: dict):

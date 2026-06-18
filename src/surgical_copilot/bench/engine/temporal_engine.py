@@ -116,6 +116,7 @@ class TemporalVariationMetric:
     def reset(self):
         self.prev_pred = None
         self.prev_label = None
+        self.tc_ious = []
         self.ious = []
         self.dices = []
 
@@ -125,6 +126,24 @@ class TemporalVariationMetric:
         l_bin = labels > 0.5
 
         if self.prev_pred is not None and self.prev_label is not None:
+
+            ## METRICA TEMPORAL CONSISTENCY (TC-IOU)
+
+            # Intersezione: pixel predetti come sangue in ENTRAMBI i frame
+            inter_frame = torch.sum(p_bin * self.prev_pred, dim=(1, 2, 3)).float()
+            # Unione: pixel predetti come sangue in ALMENO UNO dei due frame
+            union_frame = (torch.sum(p_bin, dim=(1, 2, 3)) + torch.sum(self.prev_pred, dim=(1, 2, 3))).float() - inter_frame
+
+            for i_tc, u_tc in zip(inter_frame, union_frame):
+                if u_tc > 0:
+                    tc_iou = (i_tc + self.smooth) / (u_tc + self.smooth)
+                    self.tc_ious.append(tc_iou.item())
+                else:
+                    # Se non c'è sangue in nessuno dei due frame, la stabilità è perfetta (1.0)
+                    self.tc_ious.append(1.0)
+
+            ## METRICHE SUI DELTA 
+
             # Calcolo dei delta (XOR logico per trovare i pixel cambiati)
             delta_pred = (p_bin ^ self.prev_pred).float()
             delta_label = (l_bin ^ self.prev_label).float()
@@ -153,6 +172,7 @@ class TemporalVariationMetric:
 
     def aggregate(self):
         return {
+            "temporal_consistency_iou": float(np.mean(self.tc_ious)) if self.tc_ious else 0.0,
             "temporal_iou": float(np.mean(self.ious)) if self.ious else 0.0,
             "temporal_dice": float(np.mean(self.dices)) if self.dices else 0.0
         }
