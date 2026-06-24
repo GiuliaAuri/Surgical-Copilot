@@ -1,0 +1,1433 @@
+[*] [RecurrentUNet]: Pesi pre-addestrati spaziali caricati con successo.
+[*] [RecurrentUNet]: Spatial-temporal bottleneck patch applied successfully.
+[!] Impossibile generare pesi temporali: baseline results/best_RecurrentUNet_fold1.pth non trovata.
+[!] PARTENZA DA ZERO per il Fold 1 temporale.
+[*] Fold info
+Train pigs: ['pig5', 'pig2', 'pig1', 'pig7', 'pig4', 'pig3']
+Val pigs:   ['pig9', 'pig10']
+Test pigs:  ['pig11', 'pig6']
+[*] Samples train=587 val=323 test=52
+Loading dataset: 100%|██████████| 587/587 [00:00<00:00, 59333.81it/s]
+
+
+Loading dataset: 100%|██████████| 323/323 [00:07<00:00, 43.53it/s]
+Loading dataset:  10%|▉         | 5/52 [00:00<00:01, 43.12it/s]
+============================================================
+SURGICAL COPILOT - BENCHMARK ENGINE
+============================================================
+Device: cuda
+Parameters: 20,653,180
+============================================================
+Loading dataset: 100%|██████████| 52/52 [00:01<00:00, 50.28it/s]
+
+
+
+
+
+
+
+Training:  90%|████████▉ | 526/587 [00:15<00:01, 37.73it/s, loss=0.262]
+Training: 100%|██████████| 587/587 [00:16<00:00, 34.68it/s, loss=0.144]
+
+
+
+
+
+Eval [Clean]:  94%|█████████▍| 303/323 [00:10<00:00, 36.95it/s]
+Train Loss: 0.2418 | Val Loss: 0.2564
+Clean Dice: 0.8299 | FPS: 178.65
+Eval [Clean]: 100%|██████████| 323/323 [00:10<00:00, 30.12it/s]
+
+
+
+
+
+
+
+
+Training:  97%|█████████▋| 571/587 [00:17<00:00, 39.43it/s, loss=0.176]
+Training: 100%|██████████| 587/587 [00:17<00:00, 32.91it/s, loss=0.113]
+
+
+
+
+
+
+Eval [Clean]:  89%|████████▉ | 287/323 [00:13<00:01, 33.31it/s]
+Train Loss: 0.2454 | Val Loss: 0.2952
+Clean Dice: 0.6706 | FPS: 180.17
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.43it/s]
+
+
+
+
+
+
+
+
+Training:  95%|█████████▍| 557/587 [00:16<00:00, 30.40it/s, loss=0.174]
+Training: 100%|██████████| 587/587 [00:17<00:00, 33.70it/s, loss=0.086]
+
+
+
+
+
+
+Eval [Clean]:  94%|█████████▍| 305/323 [00:12<00:00, 38.74it/s]
+Train Loss: 0.2315 | Val Loss: 0.2797
+Clean Dice: 0.6869 | FPS: 185.83
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 24.06it/s]
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:17<00:00, 34.07it/s, loss=0.13]
+Eval [Clean]:   0%|          | 0/323 [00:00<?, ?it/s]
+
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 23.26it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.2244 | Val Loss: 0.2887
+Clean Dice: 0.6458 | FPS: 190.13
+
+
+
+
+
+
+
+
+Training:  93%|█████████▎| 548/587 [00:15<00:01, 34.65it/s, loss=0.17]
+Training: 100%|██████████| 587/587 [00:17<00:00, 34.32it/s, loss=0.0878]
+
+
+
+
+
+
+Eval [Clean]:  95%|█████████▍| 306/323 [00:12<00:00, 33.28it/s]
+Train Loss: 0.2253 | Val Loss: 0.3069
+Clean Dice: 0.6221 | FPS: 209.07
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 24.80it/s]
+
+
+
+
+
+
+
+
+Training:  92%|█████████▏| 542/587 [00:17<00:01, 25.49it/s, loss=0.104]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.70it/s, loss=0.164]
+
+
+
+
+
+
+Eval [Clean]:  87%|████████▋ | 281/323 [00:12<00:01, 30.48it/s]
+Train Loss: 0.2178 | Val Loss: 0.3303
+Clean Dice: 0.5783 | FPS: 197.65
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 23.45it/s]
+
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:18<00:00, 32.44it/s, loss=0.0943]
+[*] Evaluation & Stress Test
+
+
+
+
+
+Eval [Clean]:  98%|█████████▊| 316/323 [00:11<00:00, 35.06it/s]
+Train Loss: 0.2046 | Val Loss: 0.2538
+Clean Dice: 0.6973 | FPS: 207.05
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 26.69it/s]
+
+
+
+
+
+
+
+Training:  92%|█████████▏| 542/587 [00:15<00:01, 31.85it/s, loss=0.379]
+Training: 100%|██████████| 587/587 [00:17<00:00, 34.03it/s, loss=0.0945]
+
+
+
+
+
+
+
+Eval [Clean]:  98%|█████████▊| 316/323 [00:14<00:00, 28.63it/s]
+Train Loss: 0.2037 | Val Loss: 0.3206
+Clean Dice: 0.6043 | FPS: 190.26
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.17it/s]
+
+
+
+
+
+
+
+Training:  96%|█████████▌| 561/587 [00:15<00:00, 30.18it/s, loss=0.0953]
+Training: 100%|██████████| 587/587 [00:16<00:00, 35.71it/s, loss=0.115]
+
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.12it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.2038 | Val Loss: 0.2837
+Clean Dice: 0.6416 | FPS: 170.67
+
+
+
+
+
+
+
+
+Training: 100%|█████████▉| 585/587 [00:16<00:00, 31.54it/s, loss=0.131]
+Training: 100%|██████████| 587/587 [00:16<00:00, 35.97it/s, loss=0.131]
+
+
+
+
+
+
+Eval [Clean]:  94%|█████████▍| 305/323 [00:13<00:00, 31.87it/s]
+Train Loss: 0.1946 | Val Loss: 0.3407
+Clean Dice: 0.5754 | FPS: 191.25
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.68it/s]
+
+
+
+
+
+
+
+Training:  95%|█████████▍| 556/587 [00:15<00:00, 34.45it/s, loss=0.155]
+Training: 100%|██████████| 587/587 [00:16<00:00, 35.71it/s, loss=0.102]
+
+
+
+
+
+
+Eval [Clean]:  93%|█████████▎| 300/323 [00:12<00:00, 31.05it/s]
+Train Loss: 0.1826 | Val Loss: 0.2905
+Clean Dice: 0.6333 | FPS: 181.80
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 24.59it/s]
+
+
+
+
+
+
+
+Training:  96%|█████████▋| 566/587 [00:15<00:00, 34.39it/s, loss=0.152]
+Training: 100%|██████████| 587/587 [00:16<00:00, 36.40it/s, loss=0.0739]
+
+
+
+
+
+
+Eval [Clean]:  88%|████████▊ | 284/323 [00:13<00:01, 20.93it/s]
+Train Loss: 0.1743 | Val Loss: 0.2448
+Clean Dice: 0.6938 | FPS: 179.38
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.70it/s]
+
+
+
+
+
+
+
+
+
+Training: 100%|█████████▉| 586/587 [00:19<00:00, 29.51it/s, loss=0.0965]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.61it/s, loss=0.0815]
+
+
+
+
+
+
+Eval [Clean]:  89%|████████▊ | 286/323 [00:12<00:01, 35.33it/s]
+Train Loss: 0.1737 | Val Loss: 0.2643
+Clean Dice: 0.6680 | FPS: 175.00
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.80it/s]
+
+
+
+
+
+
+
+
+Training:  98%|█████████▊| 575/587 [00:17<00:00, 35.34it/s, loss=0.1]
+Training: 100%|██████████| 587/587 [00:17<00:00, 33.63it/s, loss=0.0702]
+
+
+
+
+
+Eval [Clean]:  87%|████████▋ | 282/323 [00:11<00:01, 34.20it/s]
+Train Loss: 0.1733 | Val Loss: 0.2617
+Clean Dice: 0.6698 | FPS: 210.02
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 25.85it/s]
+
+
+
+
+
+
+
+
+Training:  95%|█████████▌| 559/587 [00:16<00:01, 25.55it/s, loss=0.0848]
+Training: 100%|██████████| 587/587 [00:17<00:00, 32.74it/s, loss=0.0718]
+
+
+
+
+
+
+Eval [Clean]:  85%|████████▌ | 275/323 [00:12<00:01, 30.75it/s]
+Train Loss: 0.1640 | Val Loss: 0.2922
+Clean Dice: 0.6398 | FPS: 206.30
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 23.32it/s]
+
+
+
+
+
+
+
+
+Training:  92%|█████████▏| 540/587 [00:16<00:01, 30.96it/s, loss=0.129]
+Training: 100%|██████████| 587/587 [00:18<00:00, 32.45it/s, loss=0.0769]
+
+
+
+
+
+
+Eval [Clean]:  89%|████████▊ | 286/323 [00:12<00:01, 31.43it/s]
+Train Loss: 0.1567 | Val Loss: 0.2788
+Clean Dice: 0.6592 | FPS: 198.57
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 24.28it/s]
+
+
+
+
+
+
+
+
+Training:  98%|█████████▊| 578/587 [00:17<00:00, 26.55it/s, loss=0.0822]
+Training: 100%|██████████| 587/587 [00:17<00:00, 33.67it/s, loss=0.101]
+
+
+
+
+
+Eval [Clean]:  93%|█████████▎| 300/323 [00:11<00:00, 36.43it/s]
+Train Loss: 0.1506 | Val Loss: 0.2250
+Clean Dice: 0.7225 | FPS: 205.06
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 26.85it/s]
+
+
+
+
+
+
+
+
+Training:  93%|█████████▎| 544/587 [00:16<00:01, 40.05it/s, loss=0.1]
+Training: 100%|██████████| 587/587 [00:18<00:00, 32.23it/s, loss=0.0591]
+
+
+
+
+
+
+Eval [Clean]:  98%|█████████▊| 318/323 [00:12<00:00, 33.08it/s]
+Train Loss: 0.1449 | Val Loss: 0.2546
+Clean Dice: 0.6872 | FPS: 210.00
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 25.77it/s]
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:17<00:00, 32.97it/s, loss=0.0712]
+[*] Evaluation & Stress Test
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 23.34it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.1351 | Val Loss: 0.2103
+Clean Dice: 0.7423 | FPS: 171.43
+
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:17<00:00, 33.24it/s, loss=0.101]
+[*] Evaluation & Stress Test
+
+
+
+
+
+Eval [Clean]:  90%|████████▉ | 290/323 [00:11<00:00, 34.59it/s]
+Train Loss: 0.1325 | Val Loss: 0.2281
+Clean Dice: 0.7215 | FPS: 191.06
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 24.86it/s]
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:16<00:00, 35.41it/s, loss=0.0796]
+Eval [Clean]:   0%|          | 0/323 [00:00<?, ?it/s]
+
+
+
+
+
+Eval [Clean]:  88%|████████▊ | 285/323 [00:10<00:00, 40.31it/s]
+Train Loss: 0.1306 | Val Loss: 0.1998
+Clean Dice: 0.7609 | FPS: 195.07
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 28.49it/s]
+
+
+
+
+
+
+
+Training:  93%|█████████▎| 544/587 [00:14<00:01, 32.47it/s, loss=0.0708]
+Training: 100%|██████████| 587/587 [00:15<00:00, 37.39it/s, loss=0.0638]
+
+
+
+
+
+
+
+Eval [Clean]:  98%|█████████▊| 315/323 [00:14<00:00, 20.88it/s]
+Train Loss: 0.1238 | Val Loss: 0.2115
+Clean Dice: 0.7428 | FPS: 157.11
+Eval [Clean]: 100%|██████████| 323/323 [00:15<00:00, 21.38it/s]
+
+
+
+
+
+
+
+Training:  94%|█████████▍| 554/587 [00:15<00:00, 34.40it/s, loss=0.0752]
+Training: 100%|██████████| 587/587 [00:16<00:00, 35.25it/s, loss=0.0678]
+
+
+
+
+
+
+Eval [Clean]:  96%|█████████▌| 310/323 [00:12<00:00, 37.93it/s]
+Train Loss: 0.1251 | Val Loss: 0.2114
+Clean Dice: 0.7466 | FPS: 175.03
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 24.47it/s]
+
+
+
+
+
+
+
+Training:  96%|█████████▋| 566/587 [00:15<00:00, 31.24it/s, loss=0.205]
+Training: 100%|██████████| 587/587 [00:15<00:00, 36.78it/s, loss=0.055]
+
+
+
+
+
+
+Eval [Clean]:  99%|█████████▉| 321/323 [00:12<00:00, 32.21it/s]
+Train Loss: 0.1214 | Val Loss: 0.2296
+Clean Dice: 0.7216 | FPS: 201.84
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 24.64it/s]
+
+
+
+
+
+
+
+
+Training:  96%|█████████▋| 566/587 [00:18<00:00, 24.71it/s, loss=0.0805]
+Training: 100%|██████████| 587/587 [00:18<00:00, 31.07it/s, loss=0.0571]
+
+
+
+
+
+Eval [Clean]:  89%|████████▉ | 289/323 [00:10<00:00, 39.30it/s]
+Train Loss: 0.1173 | Val Loss: 0.1909
+Clean Dice: 0.7722 | FPS: 197.76
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.38it/s]
+
+
+
+
+
+
+
+
+
+Training:  98%|█████████▊| 576/587 [00:18<00:00, 34.53it/s, loss=0.0578]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.63it/s, loss=0.0631]
+
+
+
+
+
+
+Eval [Clean]:  92%|█████████▏| 297/323 [00:13<00:00, 34.97it/s]
+Train Loss: 0.1134 | Val Loss: 0.2131
+Clean Dice: 0.7446 | FPS: 163.41
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.81it/s]
+
+
+
+
+
+
+
+
+Training:  95%|█████████▌| 558/587 [00:17<00:01, 25.50it/s, loss=0.0667]
+Training: 100%|██████████| 587/587 [00:18<00:00, 31.88it/s, loss=0.0682]
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 25.97it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.1137 | Val Loss: 0.1999
+Clean Dice: 0.7612 | FPS: 189.15
+
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:17<00:00, 33.12it/s, loss=0.0674]
+[*] Evaluation & Stress Test
+
+
+
+
+
+Eval [Clean]:  93%|█████████▎| 300/323 [00:11<00:00, 34.50it/s]
+Train Loss: 0.1082 | Val Loss: 0.1940
+Clean Dice: 0.7711 | FPS: 167.75
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 25.63it/s]
+
+
+
+
+
+
+
+
+Training:  96%|█████████▌| 563/587 [00:17<00:00, 28.75it/s, loss=0.0506]
+Training: 100%|██████████| 587/587 [00:18<00:00, 32.27it/s, loss=0.0621]
+
+
+
+
+
+
+Eval [Clean]:  90%|█████████ | 291/323 [00:12<00:01, 25.61it/s]
+Train Loss: 0.1045 | Val Loss: 0.2014
+Clean Dice: 0.7587 | FPS: 180.72
+Eval [Clean]: 100%|██████████| 323/323 [00:13<00:00, 23.37it/s]
+
+
+
+
+
+
+
+
+
+Training:  96%|█████████▌| 564/587 [00:19<00:00, 28.78it/s, loss=0.0929]
+Training: 100%|██████████| 587/587 [00:19<00:00, 29.55it/s, loss=0.0671]
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 26.36it/s]
+Training:   0%|          | 1/587 [00:00<02:00,  4.86it/s, loss=0.116]
+Train Loss: 0.1006 | Val Loss: 0.2012
+Clean Dice: 0.7596 | FPS: 166.39
+
+
+
+
+
+
+
+
+Training:  93%|█████████▎| 543/587 [00:16<00:01, 38.07it/s, loss=0.0742]
+Training: 100%|██████████| 587/587 [00:17<00:00, 32.67it/s, loss=0.0576]
+
+
+
+
+
+Eval [Clean]:  85%|████████▌ | 275/323 [00:10<00:01, 35.76it/s]
+Train Loss: 0.1031 | Val Loss: 0.1881
+Clean Dice: 0.7743 | FPS: 200.27
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.86it/s]
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:16<00:00, 35.44it/s, loss=0.057]
+[*] Evaluation & Stress Test
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 29.11it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.0981 | Val Loss: 0.1884
+Clean Dice: 0.7739 | FPS: 188.37
+
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:18<00:00, 32.38it/s, loss=0.0523]
+[*] Evaluation & Stress Test
+
+
+
+
+
+
+Eval [Clean]:  94%|█████████▍| 303/323 [00:13<00:00, 37.10it/s]
+Train Loss: 0.1016 | Val Loss: 0.2028
+Clean Dice: 0.7529 | FPS: 157.23
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.01it/s]
+
+
+
+
+
+
+
+
+Training:  94%|█████████▍| 552/587 [00:17<00:01, 34.14it/s, loss=0.0719]
+Training: 100%|██████████| 587/587 [00:18<00:00, 31.42it/s, loss=0.082]
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.14it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.0990 | Val Loss: 0.1897
+Clean Dice: 0.7702 | FPS: 190.06
+
+
+
+
+
+
+
+
+
+
+Training:  98%|█████████▊| 576/587 [00:20<00:00, 21.73it/s, loss=0.0544]
+Training: 100%|██████████| 587/587 [00:20<00:00, 28.45it/s, loss=0.065]
+
+
+
+
+
+Eval [Clean]:  97%|█████████▋| 312/323 [00:11<00:00, 36.43it/s]
+Train Loss: 0.0966 | Val Loss: 0.2061
+Clean Dice: 0.7468 | FPS: 198.91
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.60it/s]
+
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:19<00:00, 29.95it/s, loss=0.0523]
+[*] Evaluation & Stress Test
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.60it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.0963 | Val Loss: 0.2021
+Clean Dice: 0.7518 | FPS: 193.97
+
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.16it/s, loss=0.0574]
+Eval [Clean]:   0%|          | 0/323 [00:00<?, ?it/s]
+
+
+
+
+
+
+Eval [Clean]:  96%|█████████▋| 311/323 [00:12<00:00, 34.93it/s]
+Train Loss: 0.0953 | Val Loss: 0.2061
+Clean Dice: 0.7466 | FPS: 203.73
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 25.61it/s]
+
+
+
+
+
+
+
+
+Training:  97%|█████████▋| 570/587 [00:17<00:00, 26.11it/s, loss=0.0567]
+Training: 100%|██████████| 587/587 [00:18<00:00, 31.89it/s, loss=0.048]
+
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.71it/s]
+Training:   4%|▍         | 26/587 [00:00<00:11, 48.15it/s, loss=0.111]
+Train Loss: 0.0945 | Val Loss: 0.1929
+Clean Dice: 0.7633 | FPS: 148.82
+
+
+
+
+
+
+
+
+Training:  98%|█████████▊| 576/587 [00:16<00:00, 39.03it/s, loss=0.0635]
+Training: 100%|██████████| 587/587 [00:16<00:00, 35.03it/s, loss=0.0724]
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 28.22it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.0926 | Val Loss: 0.2025
+Clean Dice: 0.7496 | FPS: 182.74
+
+
+
+
+
+
+
+
+
+Training:  94%|█████████▎| 550/587 [00:18<00:01, 34.24it/s, loss=0.0629]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.28it/s, loss=0.0538]
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:12<00:00, 26.73it/s]
+Training:   2%|▏         | 11/587 [00:00<00:20, 27.95it/s, loss=0.0533]
+Train Loss: 0.0905 | Val Loss: 0.1849
+Clean Dice: 0.7740 | FPS: 204.69
+
+
+
+
+
+
+
+
+
+Training:  94%|█████████▍| 554/587 [00:18<00:01, 29.38it/s, loss=0.0416]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.81it/s, loss=0.0603]
+
+
+
+
+
+Eval [Clean]:  93%|█████████▎| 300/323 [00:10<00:00, 36.43it/s]
+Train Loss: 0.0896 | Val Loss: 0.1920
+Clean Dice: 0.7639 | FPS: 182.03
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.88it/s]
+
+
+
+
+
+
+
+
+Training:  99%|█████████▉| 581/587 [00:17<00:00, 34.17it/s, loss=0.0614]
+Training: 100%|██████████| 587/587 [00:17<00:00, 33.16it/s, loss=0.0515]
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 28.81it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.0899 | Val Loss: 0.2034
+Clean Dice: 0.7477 | FPS: 176.59
+
+
+
+
+
+
+
+
+
+Training:  98%|█████████▊| 577/587 [00:17<00:00, 32.92it/s, loss=0.0524]
+Training: 100%|██████████| 587/587 [00:18<00:00, 31.97it/s, loss=0.0562]
+
+
+
+
+
+
+Eval [Clean]:  93%|█████████▎| 300/323 [00:13<00:01, 18.38it/s]
+Train Loss: 0.0892 | Val Loss: 0.1834
+Clean Dice: 0.7756 | FPS: 156.77
+Eval [Clean]: 100%|██████████| 323/323 [00:14<00:00, 22.14it/s]
+
+
+
+
+
+
+
+
+
+Training:  99%|█████████▉| 580/587 [00:18<00:00, 42.48it/s, loss=0.0488]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.70it/s, loss=0.0466]
+
+
+
+
+
+Eval [Clean]:  98%|█████████▊| 315/323 [00:11<00:00, 38.62it/s]
+Train Loss: 0.0894 | Val Loss: 0.1845
+Clean Dice: 0.7728 | FPS: 187.59
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.41it/s]
+
+
+
+
+
+
+
+
+Training:  95%|█████████▌| 558/587 [00:17<00:00, 33.60it/s, loss=0.0557]
+Training: 100%|██████████| 587/587 [00:18<00:00, 32.18it/s, loss=0.0526]
+
+
+
+
+
+Eval [Clean]:  91%|█████████ | 294/323 [00:10<00:00, 36.06it/s]
+Train Loss: 0.0872 | Val Loss: 0.1898
+Clean Dice: 0.7649 | FPS: 177.74
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.49it/s]
+
+
+
+
+
+
+
+
+
+Training: 100%|██████████| 587/587 [00:19<00:00, 31.48it/s, loss=0.0622]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.30it/s, loss=0.0622]
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 28.08it/s]
+Training:   0%|          | 0/587 [00:00<?, ?it/s]
+Train Loss: 0.0847 | Val Loss: 0.1915
+Clean Dice: 0.7642 | FPS: 194.06
+
+
+
+
+
+
+
+
+
+Training:  92%|█████████▏| 541/587 [00:17<00:01, 30.13it/s, loss=0.0739]
+Training: 100%|██████████| 587/587 [00:19<00:00, 30.58it/s, loss=0.0616]
+
+
+
+
+
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 27.03it/s]
+Training:   0%|          | 1/587 [00:00<02:28,  3.96it/s, loss=0.131]
+Train Loss: 0.0856 | Val Loss: 0.1886
+Clean Dice: 0.7685 | FPS: 184.19
+
+
+
+
+
+
+
+
+
+Training:  93%|█████████▎| 546/587 [00:18<00:01, 31.17it/s, loss=0.056]
+Training: 100%|██████████| 587/587 [00:19<00:00, 29.64it/s, loss=0.063]
+
+
+
+
+
+Eval [Clean]:  89%|████████▉ | 287/323 [00:10<00:01, 35.57it/s]
+Train Loss: 0.0873 | Val Loss: 0.1872
+Clean Dice: 0.7707 | FPS: 186.64
+Eval [Clean]: 100%|██████████| 323/323 [00:11<00:00, 28.10it/s]
+
+
+
+
+
+
+
+
+
+Training:  94%|█████████▍| 554/587 [00:18<00:01, 30.22it/s, loss=0.0534]
+Training: 100%|██████████| 587/587 [00:19<00:00, 29.80it/s, loss=0.0507]
+Eval [Clean]:  20%|█▉        | 64/323 [00:02<00:10, 25.64it/s]
+Eval [Clean]:  34%|███▎      | 109/323 [00:04<00:10, 21.33it/s]
+Eval [Clean]:  53%|█████▎    | 172/323 [00:06<00:03, 39.04it/s]
+Eval [Clean]:  76%|███████▌  | 244/323 [00:08<00:02, 35.16it/s]
+Eval [Clean]:  98%|█████████▊| 318/323 [00:10<00:00, 36.84it/s]
+Eval [Clean]:  98%|█████████▊| 318/323 [00:10<00:00, 36.84it/s]
+Train Loss: 0.0845 | Val Loss: 0.1883
+Clean Dice: 0.7693 | FPS: 194.74
+Training:  12%|█▏        | 72/587 [00:01<00:11, 45.56it/s, loss=0.13]
+Training:  26%|██▌       | 154/587 [00:03<00:11, 36.25it/s, loss=0.0762]
+Training:  36%|███▌      | 209/587 [00:05<00:14, 26.87it/s, loss=0.0726]
+Training:  45%|████▍     | 263/587 [00:07<00:12, 26.77it/s, loss=0.0539]
+Training:  55%|█████▍    | 322/587 [00:09<00:09, 28.50it/s, loss=0.0405]
+Training:  66%|██████▌   | 388/587 [00:11<00:06, 32.97it/s, loss=0.096]
+Training:  76%|███████▋  | 448/587 [00:13<00:04, 28.53it/s, loss=0.128]
+Training:  86%|████████▌ | 504/587 [00:15<00:03, 25.53it/s, loss=0.0427]
+Training:  98%|█████████▊| 577/587 [00:17<00:00, 38.12it/s, loss=0.0556]
+Training:  98%|█████████▊| 577/587 [00:17<00:00, 38.12it/s, loss=0.0556]
+Eval [Clean]:   8%|▊         | 27/323 [00:01<00:10, 27.05it/s]ss=0.0676]
+Eval [Clean]:  24%|██▍       | 79/323 [00:03<00:10, 23.14it/s]ss=0.0676]
+Eval [Clean]:  38%|███▊      | 124/323 [00:05<00:08, 22.66it/s]s=0.0676]
+Eval [Clean]:  53%|█████▎    | 172/323 [00:07<00:07, 19.68it/s]s=0.0676]
+Eval [Clean]:  65%|██████▌   | 211/323 [00:09<00:06, 18.07it/s]s=0.0676]
+Eval [Clean]:  76%|███████▌  | 245/323 [00:11<00:04, 16.72it/s]s=0.0676]
+Eval [Clean]:  98%|█████████▊| 316/323 [00:13<00:00, 37.07it/s]s=0.0676]
+Eval [Clean]:  98%|█████████▊| 316/323 [00:13<00:00, 37.07it/s]s=0.0676]
+Train Loss: 0.0897 | Val Loss: 0.1892
+TEST [clean]:  21%|██        | 11/52 [00:01<00:03, 13.06it/s]s]s=0.0676]
+TEST [clean]:  21%|██        | 11/52 [00:01<00:03, 13.06it/s]s]s=0.0676]
+[clean               ] Dice: 0.5567 | HD95:  225.71
+[clean               ] Dice: 0.6199 | HD95:  229.18
+[clean               ] Dice: 0.6658 | HD95:  228.07
+[clean               ] Dice: 0.6614 | HD95:  225.07
+[clean               ] Dice: 0.6575 | HD95:  226.07
+[clean               ] Dice: 0.6758 | HD95:  222.74
+[clean               ] Dice: 0.6726 | HD95:  224.16
+[clean               ] Dice: 0.6808 | HD95:  224.74
+[clean               ] Dice: 0.6996 | HD95:  216.02
+[clean               ] Dice: 0.7128 | HD95:  206.20
+[clean               ] Dice: 0.7264 | HD95:  199.54
+[clean               ] Dice: 0.7371 | HD95:  192.59
+[clean               ] Dice: 0.7476 | HD95:  186.58
+[clean               ] Dice: 0.7563 | HD95:  181.40
+[clean               ] Dice: 0.7649 | HD95:  176.34
+[clean               ] Dice: 0.7717 | HD95:  172.34
+[clean               ] Dice: 0.7763 | HD95:  172.23
+[clean               ] Dice: 0.7814 | HD95:  169.29
+[clean               ] Dice: 0.7850 | HD95:  174.16
+[clean               ] Dice: 0.7895 | HD95:  171.73
+[clean               ] Dice: 0.7829 | HD95:  172.15
+[clean               ] Dice: 0.7770 | HD95:  172.68
+[clean               ] Dice: 0.7700 | HD95:  173.56
+[clean               ] Dice: 0.7664 | HD95:  170.50
+[clean               ] Dice: 0.7646 | HD95:  166.88
+[clean               ] Dice: 0.7633 | HD95:  163.39
+[clean               ] Dice: 0.7621 | HD95:  160.13
+[clean               ] Dice: 0.7616 | HD95:  157.15
+[clean               ] Dice: 0.7623 | HD95:  158.01
+[clean               ] Dice: 0.7623 | HD95:  158.76
+[clean               ] Dice: 0.7626 | HD95:  159.60
+[clean               ] Dice: 0.7638 | HD95:  160.37
+[clean               ] Dice: 0.7642 | HD95:  161.38
+[clean               ] Dice: 0.7671 | HD95:  163.73
+[clean               ] Dice: 0.7703 | HD95:  168.55
+[clean               ] Dice: 0.7732 | HD95:  172.00
+[clean               ] Dice: 0.7759 | HD95:  175.22
+[clean               ] Dice: 0.7780 | HD95:  178.35
+[clean               ] Dice: 0.7803 | HD95:  181.23
+[clean               ] Dice: 0.7828 | HD95:  184.09
+TEST [noise_only]:   0%|          | 0/52 [00:00<?, ?it/s]t/s]s]s=0.0676]
+TEST [noise_only]:   0%|          | 0/52 [00:00<?, ?it/s]t/s]s]s=0.0676]
+[clean               ] Dice: 0.7865 | HD95:  189.48
+[clean               ] Dice: 0.7891 | HD95:  189.05
+[clean               ] Dice: 0.7909 | HD95:  188.76
+[clean               ] Dice: 0.7929 | HD95:  188.63
+[clean               ] Dice: 0.7822 | HD95:  191.05
+[clean               ] Dice: 0.7701 | HD95:  194.17
+[clean               ] Dice: 0.7565 | HD95:  198.45
+[clean               ] Dice: 0.7537 | HD95:  197.69
+[clean               ] Dice: 0.7531 | HD95:  198.59
+[clean               ] Dice: 0.7489 | HD95:  199.74
+[clean               ] Dice: 0.7469 | HD95:  200.91
+[noise_only          ] Dice: 0.5458 | HD95:  233.87 | Drop:  26.9%
+[noise_only          ] Dice: 0.6044 | HD95:  234.97 | Drop:  19.1%
+[noise_only          ] Dice: 0.6165 | HD95:  234.35 | Drop:  17.5%
+[noise_only          ] Dice: 0.5976 | HD95:  233.25 | Drop:  20.0%
+[noise_only          ] Dice: 0.5951 | HD95:  233.70 | Drop:  20.3%
+[noise_only          ] Dice: 0.6222 | HD95:  230.18 | Drop:  16.7%
+[noise_only          ] Dice: 0.6234 | HD95:  230.80 | Drop:  16.5%
+[noise_only          ] Dice: 0.6324 | HD95:  230.50 | Drop:  15.3%
+[noise_only          ] Dice: 0.6497 | HD95:  229.52 | Drop:  13.0%
+[noise_only          ] Dice: 0.6619 | HD95:  227.20 | Drop:  11.4%
+[noise_only          ] Dice: 0.6783 | HD95:  218.79 | Drop:   9.2%
+TEST [noise_only]:  40%|████      | 21/52 [00:01<00:02, 11.48it/s].0676]
+TEST [noise_only]:  40%|████      | 21/52 [00:01<00:02, 11.48it/s].0676]
+[noise_only          ] Dice: 0.7063 | HD95:  210.92 | Drop:   5.4%
+[noise_only          ] Dice: 0.7169 | HD95:  205.17 | Drop:   4.0%
+[noise_only          ] Dice: 0.7276 | HD95:  201.96 | Drop:   2.6%
+[noise_only          ] Dice: 0.7358 | HD95:  197.38 | Drop:   1.5%
+[noise_only          ] Dice: 0.7413 | HD95:  198.62 | Drop:   0.8%
+[noise_only          ] Dice: 0.7413 | HD95:  200.94 | Drop:   0.8%
+[noise_only          ] Dice: 0.7465 | HD95:  205.68 | Drop:   0.1%
+[noise_only          ] Dice: 0.7528 | HD95:  201.64 | Drop:  -0.8%
+[noise_only          ] Dice: 0.7453 | HD95:  201.38 | Drop:   0.2%
+[noise_only          ] Dice: 0.7348 | HD95:  200.71 | Drop:   1.6%
+[noise_only          ] Dice: 0.7259 | HD95:  201.12 | Drop:   2.8%
+[noise_only          ] Dice: 0.7241 | HD95:  196.94 | Drop:   3.1%
+[noise_only          ] Dice: 0.7222 | HD95:  196.70 | Drop:   3.3%
+[noise_only          ] Dice: 0.7220 | HD95:  192.00 | Drop:   3.3%
+[noise_only          ] Dice: 0.7223 | HD95:  187.72 | Drop:   3.3%
+[noise_only          ] Dice: 0.7231 | HD95:  183.84 | Drop:   3.2%
+[noise_only          ] Dice: 0.7248 | HD95:  183.85 | Drop:   3.0%
+[noise_only          ] Dice: 0.7248 | HD95:  183.65 | Drop:   3.0%
+[noise_only          ] Dice: 0.7244 | HD95:  184.17 | Drop:   3.0%
+[noise_only          ] Dice: 0.7256 | HD95:  184.12 | Drop:   2.9%
+[noise_only          ] Dice: 0.7264 | HD95:  184.58 | Drop:   2.7%
+[noise_only          ] Dice: 0.7305 | HD95:  186.21 | Drop:   2.2%
+[noise_only          ] Dice: 0.7344 | HD95:  189.15 | Drop:   1.7%
+[noise_only          ] Dice: 0.7368 | HD95:  192.40 | Drop:   1.4%
+[noise_only          ] Dice: 0.7402 | HD95:  195.09 | Drop:   0.9%
+[noise_only          ] Dice: 0.7433 | HD95:  195.77 | Drop:   0.5%
+[noise_only          ] Dice: 0.7460 | HD95:  197.99 | Drop:   0.1%
+[noise_only          ] Dice: 0.7487 | HD95:  198.99 | Drop:  -0.2%
+[noise_only          ] Dice: 0.7510 | HD95:  201.12 | Drop:  -0.5%
+[noise_only          ] Dice: 0.7527 | HD95:  203.19 | Drop:  -0.8%
+[noise_only          ] Dice: 0.7559 | HD95:  202.56 | Drop:  -1.2%
+[noise_only          ] Dice: 0.7580 | HD95:  202.19 | Drop:  -1.5%
+[noise_only          ] Dice: 0.7599 | HD95:  201.75 | Drop:  -1.7%
+[noise_only          ] Dice: 0.7440 | HD95:  206.68 | Drop:   0.4%
+[noise_only          ] Dice: 0.7316 | HD95:  209.47 | Drop:   2.1%
+[noise_only          ] Dice: 0.7183 | HD95:  213.46 | Drop:   3.8%
+[noise_only          ] Dice: 0.7136 | HD95:  212.78 | Drop:   4.5%
+[noise_only          ] Dice: 0.7100 | HD95:  213.27 | Drop:   5.0%
+[noise_only          ] Dice: 0.7027 | HD95:  214.26 | Drop:   5.9%
+TEST [blur_only]:  12%|█▏        | 6/52 [00:00<00:05,  8.81it/s]s].0676]
+TEST [blur_only]:  12%|█▏        | 6/52 [00:00<00:05,  8.81it/s]s].0676]
+[blur_only           ] Dice: 0.4088 | HD95:  360.12 | Drop:  45.3%
+[blur_only           ] Dice: 0.3667 | HD95:  378.51 | Drop:  50.9%
+[blur_only           ] Dice: 0.3698 | HD95:  383.75 | Drop:  50.5%
+[blur_only           ] Dice: 0.4053 | HD95:  379.87 | Drop:  45.7%
+[blur_only           ] Dice: 0.3882 | HD95:  381.28 | Drop:  48.0%
+[blur_only           ] Dice: 0.4138 | HD95:  370.87 | Drop:  44.6%
+[blur_only           ] Dice: 0.4096 | HD95:  371.20 | Drop:  45.2%
+[blur_only           ] Dice: 0.4199 | HD95:  365.64 | Drop:  43.8%
+[blur_only           ] Dice: 0.4417 | HD95:  362.15 | Drop:  40.9%
+[blur_only           ] Dice: 0.4586 | HD95:  358.32 | Drop:  38.6%
+[blur_only           ] Dice: 0.4739 | HD95:  354.98 | Drop:  36.6%
+[blur_only           ] Dice: 0.4882 | HD95:  352.58 | Drop:  34.6%
+[blur_only           ] Dice: 0.5024 | HD95:  350.43 | Drop:  32.7%
+[blur_only           ] Dice: 0.5136 | HD95:  348.88 | Drop:  31.2%
+[blur_only           ] Dice: 0.5253 | HD95:  346.95 | Drop:  29.7%
+TEST [blur_only]:  48%|████▊     | 25/52 [00:02<00:02, 10.88it/s]].0676]
+TEST [blur_only]:  48%|████▊     | 25/52 [00:02<00:02, 10.88it/s]].0676]
+[blur_only           ] Dice: 0.5416 | HD95:  344.97 | Drop:  27.5%
+[blur_only           ] Dice: 0.5426 | HD95:  343.77 | Drop:  27.4%
+[blur_only           ] Dice: 0.5440 | HD95:  343.45 | Drop:  27.2%
+[blur_only           ] Dice: 0.5483 | HD95:  342.22 | Drop:  26.6%
+[blur_only           ] Dice: 0.5349 | HD95:  337.98 | Drop:  28.4%
+[blur_only           ] Dice: 0.5223 | HD95:  334.29 | Drop:  30.1%
+[blur_only           ] Dice: 0.5089 | HD95:  330.65 | Drop:  31.9%
+[blur_only           ] Dice: 0.4981 | HD95:  327.66 | Drop:  33.3%
+[blur_only           ] Dice: 0.4852 | HD95:  324.78 | Drop:  35.0%
+[blur_only           ] Dice: 0.4746 | HD95:  322.30 | Drop:  36.5%
+[blur_only           ] Dice: 0.4651 | HD95:  320.68 | Drop:  37.7%
+[blur_only           ] Dice: 0.4570 | HD95:  318.67 | Drop:  38.8%
+[blur_only           ] Dice: 0.4555 | HD95:  315.57 | Drop:  39.0%
+[blur_only           ] Dice: 0.4523 | HD95:  312.66 | Drop:  39.4%
+[blur_only           ] Dice: 0.4498 | HD95:  309.91 | Drop:  39.8%
+[blur_only           ] Dice: 0.4491 | HD95:  307.22 | Drop:  39.9%
+[blur_only           ] Dice: 0.4498 | HD95:  304.65 | Drop:  39.8%
+[blur_only           ] Dice: 0.4544 | HD95:  303.22 | Drop:  39.2%
+[blur_only           ] Dice: 0.4572 | HD95:  303.94 | Drop:  38.8%
+[blur_only           ] Dice: 0.4631 | HD95:  303.64 | Drop:  38.0%
+[blur_only           ] Dice: 0.4691 | HD95:  303.10 | Drop:  37.2%
+[blur_only           ] Dice: 0.4745 | HD95:  302.60 | Drop:  36.5%
+TEST [blur_only]:  98%|█████████▊| 51/52 [00:04<00:00, 16.32it/s]].0676]
+TEST [blur_only]:  98%|█████████▊| 51/52 [00:04<00:00, 16.32it/s]].0676]
+[blur_only           ] Dice: 0.4841 | HD95:  301.64 | Drop:  35.2%
+[blur_only           ] Dice: 0.4887 | HD95:  301.09 | Drop:  34.6%
+[blur_only           ] Dice: 0.4934 | HD95:  300.65 | Drop:  33.9%
+[blur_only           ] Dice: 0.5018 | HD95:  298.74 | Drop:  32.8%
+[blur_only           ] Dice: 0.5081 | HD95:  296.70 | Drop:  32.0%
+[blur_only           ] Dice: 0.5145 | HD95:  294.74 | Drop:  31.1%
+[blur_only           ] Dice: 0.5034 | HD95:  296.49 | Drop:  32.6%
+[blur_only           ] Dice: 0.4959 | HD95:  299.00 | Drop:  33.6%
+[blur_only           ] Dice: 0.4865 | HD95:  300.95 | Drop:  34.9%
+[blur_only           ] Dice: 0.4842 | HD95:  299.31 | Drop:  35.2%
+[blur_only           ] Dice: 0.4799 | HD95:  298.93 | Drop:  35.8%
+[blur_only           ] Dice: 0.4740 | HD95:  298.63 | Drop:  36.5%
+[blur_only           ] Dice: 0.4689 | HD95:  298.43 | Drop:  37.2%
+[intensity_shift_only] Dice: 0.5524 | HD95:  227.47 | Drop:  26.0%
+[intensity_shift_only] Dice: 0.6189 | HD95:  230.16 | Drop:  17.1%
+[intensity_shift_only] Dice: 0.6657 | HD95:  228.54 | Drop:  10.9%
+[intensity_shift_only] Dice: 0.6613 | HD95:  225.34 | Drop:  11.5%
+[intensity_shift_only] Dice: 0.6549 | HD95:  227.14 | Drop:  12.3%
+[intensity_shift_only] Dice: 0.6733 | HD95:  223.64 | Drop:   9.9%
+[intensity_shift_only] Dice: 0.6705 | HD95:  224.95 | Drop:  10.2%
+[intensity_shift_only] Dice: 0.6793 | HD95:  225.39 | Drop:   9.1%
+[intensity_shift_only] Dice: 0.6978 | HD95:  217.77 | Drop:   6.6%
+[intensity_shift_only] Dice: 0.7106 | HD95:  207.83 | Drop:   4.9%
+[intensity_shift_only] Dice: 0.7246 | HD95:  200.92 | Drop:   3.0%
+[intensity_shift_only] Dice: 0.7356 | HD95:  193.84 | Drop:   1.5%
+[intensity_shift_only] Dice: 0.7461 | HD95:  187.81 | Drop:   0.1%
+[intensity_shift_only] Dice: 0.7546 | HD95:  182.59 | Drop:  -1.0%
+TEST [intensity_shift_only]:  65%|██████▌   | 34/52 [00:01<00:00, 23.83it/s]
+TEST [intensity_shift_only]:  65%|██████▌   | 34/52 [00:01<00:00, 23.83it/s]
+[intensity_shift_only] Dice: 0.7701 | HD95:  173.90 | Drop:  -3.1%
+[intensity_shift_only] Dice: 0.7746 | HD95:  173.65 | Drop:  -3.7%
+[intensity_shift_only] Dice: 0.7797 | HD95:  170.58 | Drop:  -4.4%
+[intensity_shift_only] Dice: 0.7834 | HD95:  175.38 | Drop:  -4.9%
+[intensity_shift_only] Dice: 0.7875 | HD95:  172.80 | Drop:  -5.4%
+[intensity_shift_only] Dice: 0.7810 | HD95:  173.03 | Drop:  -4.6%
+[intensity_shift_only] Dice: 0.7752 | HD95:  173.43 | Drop:  -3.8%
+[intensity_shift_only] Dice: 0.7681 | HD95:  174.42 | Drop:  -2.8%
+[intensity_shift_only] Dice: 0.7644 | HD95:  171.63 | Drop:  -2.3%
+[intensity_shift_only] Dice: 0.7627 | HD95:  168.01 | Drop:  -2.1%
+[intensity_shift_only] Dice: 0.7614 | HD95:  164.48 | Drop:  -1.9%
+[intensity_shift_only] Dice: 0.7601 | HD95:  161.22 | Drop:  -1.8%
+[intensity_shift_only] Dice: 0.7601 | HD95:  158.21 | Drop:  -1.8%
+[intensity_shift_only] Dice: 0.7609 | HD95:  158.80 | Drop:  -1.9%
+[intensity_shift_only] Dice: 0.7609 | HD95:  159.47 | Drop:  -1.9%
+[intensity_shift_only] Dice: 0.7613 | HD95:  160.33 | Drop:  -1.9%
+[intensity_shift_only] Dice: 0.7625 | HD95:  161.11 | Drop:  -2.1%
+[intensity_shift_only] Dice: 0.7626 | HD95:  162.69 | Drop:  -2.1%
+[intensity_shift_only] Dice: 0.7656 | HD95:  164.99 | Drop:  -2.5%
+[intensity_shift_only] Dice: 0.7687 | HD95:  170.02 | Drop:  -2.9%
+[intensity_shift_only] Dice: 0.7714 | HD95:  173.63 | Drop:  -3.3%
+[intensity_shift_only] Dice: 0.7740 | HD95:  177.08 | Drop:  -3.6%
+[intensity_shift_only] Dice: 0.7760 | HD95:  180.11 | Drop:  -3.9%
+[intensity_shift_only] Dice: 0.7783 | HD95:  182.88 | Drop:  -4.2%
+[intensity_shift_only] Dice: 0.7807 | HD95:  185.75 | Drop:  -4.5%
+[intensity_shift_only] Dice: 0.7826 | HD95:  188.31 | Drop:  -4.8%
+[intensity_shift_only] Dice: 0.7843 | HD95:  190.70 | Drop:  -5.0%
+[intensity_shift_only] Dice: 0.7869 | HD95:  190.32 | Drop:  -5.3%
+[intensity_shift_only] Dice: 0.7885 | HD95:  190.10 | Drop:  -5.6%
+[intensity_shift_only] Dice: 0.7904 | HD95:  189.77 | Drop:  -5.8%
+[intensity_shift_only] Dice: 0.7789 | HD95:  192.17 | Drop:  -4.3%
+[intensity_shift_only] Dice: 0.7669 | HD95:  195.24 | Drop:  -2.7%
+[intensity_shift_only] Dice: 0.7532 | HD95:  199.51 | Drop:  -0.8%
+[intensity_shift_only] Dice: 0.7504 | HD95:  198.88 | Drop:  -0.5%
+[intensity_shift_only] Dice: 0.7498 | HD95:  199.74 | Drop:  -0.4%
+[intensity_shift_only] Dice: 0.7455 | HD95:  200.82 | Drop:   0.2%
+[intensity_shift_only] Dice: 0.7435 | HD95:  201.94 | Drop:   0.5%
+[smoke_only          ] Dice: 0.4519 | HD95:   96.46 | Drop:  39.5%
+[smoke_only          ] Dice: 0.3828 | HD95:  158.06 | Drop:  48.8%
+[smoke_only          ] Dice: 0.4481 | HD95:  184.85 | Drop:  40.0%
+[smoke_only          ] Dice: 0.4908 | HD95:  168.09 | Drop:  34.3%
+TEST [smoke_only]:  37%|███▋      | 19/52 [00:01<00:01, 18.30it/s]18.96it/s]
+TEST [smoke_only]:  37%|███▋      | 19/52 [00:01<00:01, 18.30it/s]18.96it/s]
+[smoke_only          ] Dice: 0.4591 | HD95:  193.13 | Drop:  38.5%
+[smoke_only          ] Dice: 0.4945 | HD95:  198.69 | Drop:  33.8%
+[smoke_only          ] Dice: 0.4977 | HD95:  199.71 | Drop:  33.4%
+[smoke_only          ] Dice: 0.5212 | HD95:  184.60 | Drop:  30.2%
+[smoke_only          ] Dice: 0.5502 | HD95:  181.16 | Drop:  26.3%
+[smoke_only          ] Dice: 0.5670 | HD95:  185.36 | Drop:  24.1%
+[smoke_only          ] Dice: 0.5836 | HD95:  177.66 | Drop:  21.9%
+[smoke_only          ] Dice: 0.5912 | HD95:  175.38 | Drop:  20.8%
+[smoke_only          ] Dice: 0.6071 | HD95:  166.70 | Drop:  18.7%
+[smoke_only          ] Dice: 0.6146 | HD95:  170.14 | Drop:  17.7%
+[smoke_only          ] Dice: 0.6216 | HD95:  173.69 | Drop:  16.8%
+[smoke_only          ] Dice: 0.6230 | HD95:  172.89 | Drop:  16.6%
+[smoke_only          ] Dice: 0.6163 | HD95:  168.76 | Drop:  17.5%
+[smoke_only          ] Dice: 0.6146 | HD95:  174.35 | Drop:  17.7%
+[smoke_only          ] Dice: 0.6144 | HD95:  174.83 | Drop:  17.7%
+[smoke_only          ] Dice: 0.6115 | HD95:  170.44 | Drop:  18.1%
+[smoke_only          ] Dice: 0.6140 | HD95:  171.48 | Drop:  17.8%
+[smoke_only          ] Dice: 0.6141 | HD95:  166.73 | Drop:  17.8%
+[smoke_only          ] Dice: 0.6174 | HD95:  162.62 | Drop:  17.3%
+[smoke_only          ] Dice: 0.6130 | HD95:  161.46 | Drop:  17.9%
+[smoke_only          ] Dice: 0.6156 | HD95:  158.27 | Drop:  17.6%
+[smoke_only          ] Dice: 0.6145 | HD95:  155.48 | Drop:  17.7%
+[smoke_only          ] Dice: 0.6169 | HD95:  152.49 | Drop:  17.4%
+[smoke_only          ] Dice: 0.6192 | HD95:  153.43 | Drop:  17.1%
+[smoke_only          ] Dice: 0.6237 | HD95:  149.50 | Drop:  16.5%
+[smoke_only          ] Dice: 0.6284 | HD95:  146.37 | Drop:  15.9%
+[smoke_only          ] Dice: 0.6342 | HD95:  144.83 | Drop:  15.1%
+[smoke_only          ] Dice: 0.6388 | HD95:  146.30 | Drop:  14.5%
+[smoke_only          ] Dice: 0.6464 | HD95:  143.67 | Drop:  13.5%
+[smoke_only          ] Dice: 0.6522 | HD95:  149.28 | Drop:  12.7%
+[smoke_only          ] Dice: 0.6589 | HD95:  152.79 | Drop:  11.8%
+[smoke_only          ] Dice: 0.6642 | HD95:  156.99 | Drop:  11.1%
+[smoke_only          ] Dice: 0.6702 | HD95:  160.82 | Drop:  10.3%
+[smoke_only          ] Dice: 0.6752 | HD95:  164.52 | Drop:   9.6%
+[smoke_only          ] Dice: 0.6799 | HD95:  167.93 | Drop:   9.0%
+[smoke_only          ] Dice: 0.6852 | HD95:  171.21 | Drop:   8.3%
+[smoke_only          ] Dice: 0.6900 | HD95:  174.46 | Drop:   7.6%
+[smoke_only          ] Dice: 0.6952 | HD95:  174.59 | Drop:   6.9%
+[smoke_only          ] Dice: 0.6986 | HD95:  174.20 | Drop:   6.5%
+[smoke_only          ] Dice: 0.7009 | HD95:  171.90 | Drop:   6.2%
+[smoke_only          ] Dice: 0.6925 | HD95:  176.55 | Drop:   7.3%
+TEST [contrast_only]:   6%|▌         | 3/52 [00:00<00:05,  8.74it/s].96it/s]
+TEST [contrast_only]:   6%|▌         | 3/52 [00:00<00:05,  8.74it/s].96it/s]
+[smoke_only          ] Dice: 0.6730 | HD95:  184.63 | Drop:   9.9%
+[smoke_only          ] Dice: 0.6701 | HD95:  182.46 | Drop:  10.3%
+[smoke_only          ] Dice: 0.6697 | HD95:  183.33 | Drop:  10.3%
+[smoke_only          ] Dice: 0.6633 | HD95:  184.93 | Drop:  11.2%
+[smoke_only          ] Dice: 0.6607 | HD95:  186.56 | Drop:  11.5%
+[contrast_only       ] Dice: 0.5406 | HD95:  224.11 | Drop:  27.6%
+[contrast_only       ] Dice: 0.6068 | HD95:  222.00 | Drop:  18.8%
+[contrast_only       ] Dice: 0.6354 | HD95:  192.99 | Drop:  14.9%
+[contrast_only       ] Dice: 0.6383 | HD95:  197.29 | Drop:  14.5%
+[contrast_only       ] Dice: 0.6313 | HD95:  203.27 | Drop:  15.5%
+[contrast_only       ] Dice: 0.6522 | HD95:  204.07 | Drop:  12.7%
+[contrast_only       ] Dice: 0.6479 | HD95:  208.20 | Drop:  13.3%
+[contrast_only       ] Dice: 0.6573 | HD95:  210.68 | Drop:  12.0%
+[contrast_only       ] Dice: 0.6760 | HD95:  199.53 | Drop:   9.5%
+[contrast_only       ] Dice: 0.6897 | HD95:  190.54 | Drop:   7.7%
+[contrast_only       ] Dice: 0.7043 | HD95:  183.47 | Drop:   5.7%
+[contrast_only       ] Dice: 0.7145 | HD95:  177.01 | Drop:   4.3%
+[contrast_only       ] Dice: 0.7241 | HD95:  167.83 | Drop:   3.1%
+[contrast_only       ] Dice: 0.7327 | HD95:  163.35 | Drop:   1.9%
+[contrast_only       ] Dice: 0.7402 | HD95:  156.91 | Drop:   0.9%
+[contrast_only       ] Dice: 0.7469 | HD95:  154.11 | Drop:   0.0%
+[contrast_only       ] Dice: 0.7528 | HD95:  151.80 | Drop:  -0.8%
+[contrast_only       ] Dice: 0.7567 | HD95:  144.93 | Drop:  -1.3%
+[contrast_only       ] Dice: 0.7607 | HD95:  152.62 | Drop:  -1.8%
+[contrast_only       ] Dice: 0.7640 | HD95:  150.97 | Drop:  -2.3%
+[contrast_only       ] Dice: 0.7567 | HD95:  152.14 | Drop:  -1.3%
+[contrast_only       ] Dice: 0.7420 | HD95:  153.78 | Drop:   0.7%
+[contrast_only       ] Dice: 0.7244 | HD95:  156.06 | Drop:   3.0%
+[contrast_only       ] Dice: 0.7184 | HD95:  156.90 | Drop:   3.8%
+[contrast_only       ] Dice: 0.7190 | HD95:  158.68 | Drop:   3.7%
+[contrast_only       ] Dice: 0.7214 | HD95:  154.85 | Drop:   3.4%
+TEST [contrast_only]:  77%|███████▋  | 40/52 [00:02<00:00, 19.22it/s]96it/s]
+TEST [contrast_only]:  77%|███████▋  | 40/52 [00:02<00:00, 19.22it/s]96it/s]
+[contrast_only       ] Dice: 0.7244 | HD95:  149.82 | Drop:   3.0%
+[contrast_only       ] Dice: 0.7209 | HD95:  151.14 | Drop:   3.5%
+[contrast_only       ] Dice: 0.7181 | HD95:  152.27 | Drop:   3.9%
+[contrast_only       ] Dice: 0.7164 | HD95:  153.49 | Drop:   4.1%
+[contrast_only       ] Dice: 0.7156 | HD95:  154.57 | Drop:   4.2%
+[contrast_only       ] Dice: 0.7167 | HD95:  155.47 | Drop:   4.1%
+[contrast_only       ] Dice: 0.7198 | HD95:  157.68 | Drop:   3.6%
+[contrast_only       ] Dice: 0.7210 | HD95:  161.91 | Drop:   3.5%
+[contrast_only       ] Dice: 0.7232 | HD95:  164.90 | Drop:   3.2%
+[contrast_only       ] Dice: 0.7257 | HD95:  167.89 | Drop:   2.8%
+[contrast_only       ] Dice: 0.7267 | HD95:  170.68 | Drop:   2.7%
+[contrast_only       ] Dice: 0.7274 | HD95:  173.27 | Drop:   2.6%
+[contrast_only       ] Dice: 0.7287 | HD95:  175.75 | Drop:   2.4%
+[contrast_only       ] Dice: 0.7295 | HD95:  177.96 | Drop:   2.3%
+[contrast_only       ] Dice: 0.7306 | HD95:  180.17 | Drop:   2.2%
+[contrast_only       ] Dice: 0.7345 | HD95:  180.16 | Drop:   1.7%
+[contrast_only       ] Dice: 0.7372 | HD95:  180.43 | Drop:   1.3%
+[contrast_only       ] Dice: 0.7402 | HD95:  180.16 | Drop:   0.9%
+[contrast_only       ] Dice: 0.7259 | HD95:  183.27 | Drop:   2.8%
+[contrast_only       ] Dice: 0.7123 | HD95:  188.30 | Drop:   4.6%
+[contrast_only       ] Dice: 0.6986 | HD95:  192.28 | Drop:   6.5%
+[contrast_only       ] Dice: 0.6945 | HD95:  191.82 | Drop:   7.0%
+[contrast_only       ] Dice: 0.6896 | HD95:  192.98 | Drop:   7.7%
+[contrast_only       ] Dice: 0.6838 | HD95:  194.25 | Drop:   8.4%
+[contrast_only       ] Dice: 0.6791 | HD95:  195.38 | Drop:   9.1%
+[specular_only       ] Dice: 0.4987 | HD95:  229.70 | Drop:  33.2%
+[specular_only       ] Dice: 0.5504 | HD95:  232.86 | Drop:  26.3%
+[specular_only       ] Dice: 0.6048 | HD95:  232.42 | Drop:  19.0%
+[specular_only       ] Dice: 0.6092 | HD95:  229.61 | Drop:  18.4%
+[specular_only       ] Dice: 0.6052 | HD95:  230.80 | Drop:  19.0%
+TEST [specular_only]:  33%|███▎      | 17/52 [00:01<00:02, 13.94it/s]96it/s]
+TEST [specular_only]:  33%|███▎      | 17/52 [00:01<00:02, 13.94it/s]96it/s]
+[specular_only       ] Dice: 0.6306 | HD95:  227.70 | Drop:  15.6%
+[specular_only       ] Dice: 0.6398 | HD95:  227.41 | Drop:  14.3%
+[specular_only       ] Dice: 0.6626 | HD95:  218.10 | Drop:  11.3%
+[specular_only       ] Dice: 0.6769 | HD95:  211.28 | Drop:   9.4%
+[specular_only       ] Dice: 0.6927 | HD95:  203.02 | Drop:   7.3%
+[specular_only       ] Dice: 0.7030 | HD95:  197.50 | Drop:   5.9%
+[specular_only       ] Dice: 0.7137 | HD95:  191.34 | Drop:   4.4%
+[specular_only       ] Dice: 0.7216 | HD95:  185.99 | Drop:   3.4%
+[specular_only       ] Dice: 0.7307 | HD95:  181.14 | Drop:   2.2%
+[specular_only       ] Dice: 0.7381 | HD95:  177.37 | Drop:   1.2%
+[specular_only       ] Dice: 0.7429 | HD95:  177.30 | Drop:   0.5%
+[specular_only       ] Dice: 0.7483 | HD95:  180.03 | Drop:  -0.2%
+[specular_only       ] Dice: 0.7524 | HD95:  185.26 | Drop:  -0.7%
+[specular_only       ] Dice: 0.7573 | HD95:  184.47 | Drop:  -1.4%
+[specular_only       ] Dice: 0.7504 | HD95:  184.03 | Drop:  -0.5%
+[specular_only       ] Dice: 0.7422 | HD95:  183.79 | Drop:   0.6%
+[specular_only       ] Dice: 0.7309 | HD95:  184.35 | Drop:   2.1%
+[specular_only       ] Dice: 0.7264 | HD95:  183.57 | Drop:   2.7%
+[specular_only       ] Dice: 0.7223 | HD95:  180.11 | Drop:   3.3%
+[specular_only       ] Dice: 0.7208 | HD95:  176.52 | Drop:   3.5%
+[specular_only       ] Dice: 0.7191 | HD95:  173.21 | Drop:   3.7%
+[specular_only       ] Dice: 0.7178 | HD95:  170.12 | Drop:   3.9%
+[specular_only       ] Dice: 0.7167 | HD95:  171.11 | Drop:   4.1%
+[specular_only       ] Dice: 0.7162 | HD95:  171.57 | Drop:   4.1%
+[specular_only       ] Dice: 0.7172 | HD95:  172.41 | Drop:   4.0%
+[specular_only       ] Dice: 0.7194 | HD95:  173.13 | Drop:   3.7%
+[specular_only       ] Dice: 0.7195 | HD95:  174.12 | Drop:   3.7%
+[specular_only       ] Dice: 0.7225 | HD95:  176.01 | Drop:   3.3%
+[specular_only       ] Dice: 0.7255 | HD95:  180.59 | Drop:   2.9%
+[specular_only       ] Dice: 0.7282 | HD95:  183.45 | Drop:   2.5%
+[specular_only       ] Dice: 0.7310 | HD95:  186.39 | Drop:   2.1%
+TEST [specular_only]:  98%|█████████▊| 51/52 [00:03<00:00, 19.92it/s]96it/s]
+TEST [specular_only]:  98%|█████████▊| 51/52 [00:03<00:00, 19.92it/s]96it/s]
+[specular_only       ] Dice: 0.7369 | HD95:  191.30 | Drop:   1.3%
+[specular_only       ] Dice: 0.7401 | HD95:  193.35 | Drop:   0.9%
+[specular_only       ] Dice: 0.7431 | HD95:  195.04 | Drop:   0.5%
+[specular_only       ] Dice: 0.7459 | HD95:  197.32 | Drop:   0.1%
+[specular_only       ] Dice: 0.7490 | HD95:  196.77 | Drop:  -0.3%
+[specular_only       ] Dice: 0.7515 | HD95:  196.33 | Drop:  -0.6%
+[specular_only       ] Dice: 0.7543 | HD95:  195.94 | Drop:  -1.0%
+[specular_only       ] Dice: 0.7450 | HD95:  198.15 | Drop:   0.3%
+[specular_only       ] Dice: 0.7333 | HD95:  201.17 | Drop:   1.8%
+[specular_only       ] Dice: 0.7203 | HD95:  205.26 | Drop:   3.6%
+[specular_only       ] Dice: 0.7174 | HD95:  204.39 | Drop:   4.0%
+[specular_only       ] Dice: 0.7155 | HD95:  205.20 | Drop:   4.2%
+[specular_only       ] Dice: 0.7106 | HD95:  206.32 | Drop:   4.9%
+[specular_only       ] Dice: 0.7095 | HD95:  207.35 | Drop:   5.0%
+[chirurgical_worst_case] Dice: 0.1909 | HD95:  363.19 | Drop:  74.4%
+[chirurgical_worst_case] Dice: 0.2487 | HD95:  352.96 | Drop:  66.7%
+[chirurgical_worst_case] Dice: 0.1927 | HD95:  359.82 | Drop:  74.2%
+[chirurgical_worst_case] Dice: 0.1708 | HD95:  360.91 | Drop:  77.1%
+[chirurgical_worst_case] Dice: 0.1609 | HD95:  362.18 | Drop:  78.5%
+TEST [chirurgical_worst_case]:  21%|██        | 11/52 [00:01<00:06,  6.76it/s]
+TEST [chirurgical_worst_case]:  21%|██        | 11/52 [00:01<00:06,  6.76it/s]
+[chirurgical_worst_case] Dice: 0.1451 | HD95:  354.39 | Drop:  80.6%
+[chirurgical_worst_case] Dice: 0.1397 | HD95:  346.01 | Drop:  81.3%
+[chirurgical_worst_case] Dice: 0.1426 | HD95:  344.26 | Drop:  80.9%
+[chirurgical_worst_case] Dice: 0.1489 | HD95:  342.48 | Drop:  80.1%
+[chirurgical_worst_case] Dice: 0.1758 | HD95:  340.22 | Drop:  76.5%
+[chirurgical_worst_case] Dice: 0.1755 | HD95:  335.04 | Drop:  76.5%
+[chirurgical_worst_case] Dice: 0.1784 | HD95:  332.34 | Drop:  76.1%
+[chirurgical_worst_case] Dice: 0.1775 | HD95:  330.51 | Drop:  76.2%
+[chirurgical_worst_case] Dice: 0.1798 | HD95:  328.59 | Drop:  75.9%
+[chirurgical_worst_case] Dice: 0.1823 | HD95:  327.03 | Drop:  75.6%
+[chirurgical_worst_case] Dice: 0.1797 | HD95:  326.63 | Drop:  75.9%
+[chirurgical_worst_case] Dice: 0.1778 | HD95:  324.44 | Drop:  76.2%
+[chirurgical_worst_case] Dice: 0.1712 | HD95:  320.63 | Drop:  77.1%
+[chirurgical_worst_case] Dice: 0.1732 | HD95:  319.94 | Drop:  76.8%
+[chirurgical_worst_case] Dice: 0.1731 | HD95:  316.46 | Drop:  76.8%
+TEST [chirurgical_worst_case]:  62%|██████▏   | 32/52 [00:03<00:01, 12.18it/s]
+TEST [chirurgical_worst_case]:  62%|██████▏   | 32/52 [00:03<00:01, 12.18it/s]
+[chirurgical_worst_case] Dice: 0.1687 | HD95:  311.15 | Drop:  77.4%
+[chirurgical_worst_case] Dice: 0.1662 | HD95:  309.03 | Drop:  77.7%
+[chirurgical_worst_case] Dice: 0.1626 | HD95:  306.90 | Drop:  78.2%
+[chirurgical_worst_case] Dice: 0.1606 | HD95:  305.09 | Drop:  78.5%
+[chirurgical_worst_case] Dice: 0.1608 | HD95:  304.26 | Drop:  78.5%
+[chirurgical_worst_case] Dice: 0.1573 | HD95:  302.76 | Drop:  78.9%
+[chirurgical_worst_case] Dice: 0.1609 | HD95:  300.09 | Drop:  78.5%
+[chirurgical_worst_case] Dice: 0.1657 | HD95:  297.64 | Drop:  77.8%
+[chirurgical_worst_case] Dice: 0.1689 | HD95:  295.16 | Drop:  77.4%
+[chirurgical_worst_case] Dice: 0.1697 | HD95:  293.13 | Drop:  77.3%
+[chirurgical_worst_case] Dice: 0.1722 | HD95:  290.82 | Drop:  77.0%
+[chirurgical_worst_case] Dice: 0.1797 | HD95:  289.34 | Drop:  75.9%
+[chirurgical_worst_case] Dice: 0.1879 | HD95:  290.37 | Drop:  74.8%
+[chirurgical_worst_case] Dice: 0.1959 | HD95:  289.63 | Drop:  73.8%
+[chirurgical_worst_case] Dice: 0.2010 | HD95:  289.36 | Drop:  73.1%
+[chirurgical_worst_case] Dice: 0.2068 | HD95:  289.18 | Drop:  72.3%
+[chirurgical_worst_case] Dice: 0.2100 | HD95:  288.87 | Drop:  71.9%
+[chirurgical_worst_case] Dice: 0.2161 | HD95:  287.93 | Drop:  71.1%
+[chirurgical_worst_case] Dice: 0.2232 | HD95:  287.36 | Drop:  70.1%
+[chirurgical_worst_case] Dice: 0.2293 | HD95:  286.67 | Drop:  69.3%
+[chirurgical_worst_case] Dice: 0.2371 | HD95:  285.03 | Drop:  68.3%
+[chirurgical_worst_case] Dice: 0.2434 | HD95:  283.24 | Drop:  67.4%
+[chirurgical_worst_case] Dice: 0.2509 | HD95:  281.66 | Drop:  66.4%
+[chirurgical_worst_case] Dice: 0.2460 | HD95:  284.21 | Drop:  67.1%
+TEST [chirurgical_worst_case]: 100%|██████████| 52/52 [00:05<00:00,  9.16it/s]
+TEST [chirurgical_worst_case]: 100%|██████████| 52/52 [00:05<00:00,  9.16it/s]
+[chirurgical_worst_case] Dice: 0.2361 | HD95:  287.51 | Drop:  68.4%
+[chirurgical_worst_case] Dice: 0.2345 | HD95:  285.78 | Drop:  68.6%
+[chirurgical_worst_case] Dice: 0.2324 | HD95:  285.50 | Drop:  68.9%
+[chirurgical_worst_case] Dice: 0.2289 | HD95:  284.99 | Drop:  69.4%
+[chirurgical_worst_case] Dice: 0.2268 | HD95:  284.81 | Drop:  69.6%
+=== TEST RESULTS ON BEST MODEL ===
+Baseline | Dice: 0.7469 | HD95: 200.9050 | IoU: 0.6189

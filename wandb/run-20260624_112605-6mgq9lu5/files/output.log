@@ -1,0 +1,147 @@
+[*] Fold info
+Train pigs: ['pig11', 'pig4', 'pig2', 'pig1', 'pig3', 'pig6']
+Val pigs:   ['pig9', 'pig10']
+Test pigs:  ['pig7', 'pig5']
+[*] Samples train=444 val=323 test=195
+Loading dataset: 100%|██████████| 444/444 [00:00<00:00, 1075835.34it/s]
+
+
+Loading dataset: 100%|██████████| 323/323 [00:07<00:00, 45.41it/s]
+
+Loading dataset:  50%|█████     | 98/195 [00:02<00:02, 39.13it/s]
+============================================================
+SURGICAL COPILOT - BENCHMARK ENGINE
+============================================================
+Device: cuda
+Parameters: 6,495,868
+============================================================
+
+Loading dataset: 100%|██████████| 195/195 [00:04<00:00, 40.68it/s]
+Training:   0%|          | 0/111 [00:00<?, ?it/s]/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/torch/_tensor.py:1418: UserWarning: Applied workaround for CuDNN issue, install nvrtc.so (Triggered internally at ../aten/src/ATen/native/cudnn/Conv_v8.cpp:80.)
+  ret = func(*args, **kwargs)
+
+
+
+
+Training:  86%|████████▌ | 95/111 [00:11<00:01,  9.75it/s, loss=0.649]
+
+Training: 100%|██████████| 111/111 [00:13<00:00,  8.41it/s, loss=0.696]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -11,6 +11,7 @@ from surgical_copilot.bench.engine.temporal_engine import TemporalBenchmarkEngin
 from surgical_copilot.HemoDataset import HemosetDataSet
 from surgical_copilot.bench.perturbation import PerturbationPipelines
 from surgical_copilot.transfer_weights import load_or_create_temporal_weights
+from surgical_copilot.utils.repro import set_seed
 
 
 class KFoldRunner:
@@ -20,6 +21,8 @@ class KFoldRunner:
         self.device = torch.device(cfg.device if torch.cuda.is_available() else "cpu")
 
     def run(self):
+
+        set_seed(self.cfg.seed) # for reproducibility
 
         dataset = HemosetDataSet(
             root_dir=self.cfg.data.root_dir,

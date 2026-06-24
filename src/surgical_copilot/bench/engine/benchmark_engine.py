@@ -5,8 +5,12 @@ import wandb
 from tqdm import tqdm
 from pathlib import Path
 
-from monai.metrics import DiceMetric, HausdorffDistanceMetric, MeanIoU
-from monai.transforms import Activations, AsDiscrete, Compose
+from monai.metrics.meandice import DiceMetric
+from monai.metrics.hausdorff_distance import HausdorffDistanceMetric
+from monai.metrics.meaniou import MeanIoU
+from monai.transforms.post.array import Activations, AsDiscrete
+from monai.transforms.compose import Compose
+from monai.transforms.post.array import KeepLargestConnectedComponent
 
 from surgical_copilot.bench.perturbation import PerturbationPipelines
 from surgical_copilot.bench.engine.logger_wandb import WandbLogger
@@ -50,7 +54,8 @@ class BenchmarkEngine:
 
         self.post_pred = Compose([
             Activations(sigmoid=True),
-            AsDiscrete(threshold=0.5)
+            AsDiscrete(threshold=0.5),
+            KeepLargestConnectedComponent(applied_labels=None) ## !!!!
         ])
         self.post_label = Compose([
             AsDiscrete(threshold=0.5)
@@ -217,7 +222,7 @@ class BenchmarkEngine:
                     epochs_total = self.cfg.trainer.trainer.max_epochs
                     is_last_epoch = (epoch == epochs_total - 1)
                     
-                    if epoch == 0 or (epoch + 1) % 5 == 0 or is_last_epoch:
+                    if epoch == 0 or (epoch + 1) % 10 == 0 or is_last_epoch:
                         if wandb.run is not None:
                             self.logger.log_qualitative_masks(x, y, preds, "clean", epoch)
                                                     
@@ -244,6 +249,8 @@ class BenchmarkEngine:
             "stress": {}
         }
 
+        test_epoch = self.cfg.trainer.trainer.max_epochs
+
         with torch.inference_mode():
 
             for scenario_name, pipeline in eval_scenarios.items():
@@ -251,6 +258,8 @@ class BenchmarkEngine:
                 self.dice_metric.reset()
                 self.hd95_metric.reset()
                 self.iou.reset()
+
+                logged_visuals = False
 
                 total_model_time = 0.0
                 total_images = 0
@@ -293,6 +302,17 @@ class BenchmarkEngine:
                         "hd95": self.hd95_metric.aggregate().item(),
                         "iou": self.iou.aggregate().item(),
                         "inference_fps": total_images / max(total_model_time, 1e-8)}
+                    
+                    if not logged_visuals:
+                        if wandb.run is not None:
+                            self.logger.log_qualitative_masks(
+                                images=x, 
+                                labels=labels, 
+                                preds=preds, 
+                                scenario_name=scenario_name, 
+                                epoch=test_epoch
+                            )
+                        logged_visuals = True
                     
                     if scenario_name == "clean":
                         metrics["baseline"] = scores
@@ -338,13 +358,13 @@ class BenchmarkEngine:
             print(f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             print(f"Clean Dice: {clean_dice:.4f} | FPS: {fps:.2f}")
 
+            current_lr = self.optimizer.param_groups[0]["lr"]
+            self.logger.log_epoch_metrics(epoch, train_loss, current_lr, metrics)
+
             if clean_dice > best_fold_metrics["dice"]:
                 best_fold_metrics = metrics["baseline"]
                 best_path = self._save_checkpoint(self.fold_idx)
     
-            current_lr = self.optimizer.param_groups[0]["lr"]
-            self.logger.log_epoch_metrics(epoch, train_loss, current_lr, metrics)
-
         if best_path is None:
             raise RuntimeError("Training finish without any valid checkpoint.")
 
@@ -356,7 +376,7 @@ class BenchmarkEngine:
         print("\n=== TEST RESULTS ON BEST MODEL ===")
         print(f"Baseline | Dice: {test_metrics['baseline']['dice']:.4f} | HD95: {test_metrics['baseline']['hd95']:.4f} | IoU: {test_metrics['baseline']['iou']:.4f}")
 
-        return best_fold_metrics
+        return test_metrics
 
     def _save_checkpoint(self, fold_idx: int) -> str:
 
