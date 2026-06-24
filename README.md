@@ -11,7 +11,7 @@ Python: 3.11
 * **Validazione**: È implementato un protocollo di validazione incrociata K-Fold gestito dinamicamente tramite configurazione (`cfg.data.n_folds`) per garantire la robustezza statistica delle metriche.
 * **Pipeline di Perturbazione**: I data loader integrano pipeline di data augmentation e stress test avanzati tramite `PerturbationPipelines.get_train_pipeline()`, necessarie per testare la robustezza dei modelli sotto condizioni avverse quali fumo, rumore e riflessi speculari.
 
-## 2. Configurazione e Pipeline di Training
+### 2. Configurazione e Pipeline di Training
 
 **Training Loop & Dataloading**
 
@@ -32,11 +32,11 @@ Il parametro `sigmoid: True` serve ad appiattire  l'output del modello e trattar
 * **Mixed Precision (AMP):** Il parametro `precision: "16-mixed"` accoppiato al `GradScaler` abilitato è fondamentale. Il calcolo in FP16 dimezza i consumi di memoria e raddoppia quasi il throughput computazionale (sfruttando i Tensor Cores dell'hardware), mentre lo scaler previene l'underflow dei gradienti (cioè valori che diventerebbero zero nella precisione a 16-bit) mantenendo la stabilità dell'aggiornamento.
 * **Scheduler** Viene usato un `SequentialLR` a due fasi (Warmup lineare + Cosine Annealing) che permette di iniziare l'addestramento con un learning rate basso per i primi 5 step (warmup) e poi decrescerlo secondo una curva coseno, riducendo il rischio di oscillazioni e migliorando la convergenza finale.
 
-**4. Regolarizzazione**
+**Regolarizzazione**
 
 * **Early Stopping**: L'addestramento verrà interrotto anticipatamente se il `val_dice` non migliora per 5 cicli di valutazione consecutivi (`patience: 5`). Poiché valutiamo ogni 5 epoche, una pazienza di 5 significa che l'Early Stopping interverrà dopo **25 epoche** senza miglioramenti sul set di validazione.
 
-## 3. Tassonomia dei Modelli Implementati
+### 3. Tassonomia dei Modelli Implementati
 
 1. **Modelli Spaziali Pre-addestrati**: Classi `SMPUNet` e `SMPUNetPlusPlus` configurate esplicitamente con encoder ResNet18 e pesi pre-addestrati su ImageNet, rispecchiando la metodologia di inizializzazione descrittiva delle baseline del dataset HemoSet. Abbiamo, quindi esteso le classi di MONAI per includere questi modelli SMP, garantendo compatibilità con il framework di addestramento e validazione.
 2. **Modelli Temporali / Ricorrenti**: Architetture dedicate all'analisi della coerenza sequenziale (Early Fusion e Late Fusion). Spicca la classe `RecurrentSMPUNet` che combina l'encoder spaziale ResNet18 pre-addestrato con un modulo ricorrente (GRU o LSTM) applicato direttamente al livello del bottleneck. Per questi modelli è previsto il congelamento iniziale del backbone (`freeze_backbone=True`) e una fase di warm-start.
