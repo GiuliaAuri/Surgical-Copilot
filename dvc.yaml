@@ -1,7 +1,0 @@
-stages:
-  extraction_hemoset:
-    cmd: python src/surgical_copilot/data_extraction.py --source_dir data/hemoset --target_dir data/raw
-    deps:
-      - data/hemoset
-    outs:
-      - data/raw

@@ -36,6 +36,10 @@ yolo_v8_seg:
   num_classes: 1
   num_masks: 32
 
+# ==============================================================================
+#  MODELLI TEMPORALI
+# ==============================================================================
+
 yolo_v8_seg_temporal:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
   in_channels: 4   # 3 channels RGB + 1 mask t-1 channel
@@ -45,15 +49,30 @@ yolo_v8_seg_temporal:
   temporal_mode: "early_fusion"
   temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
 
-yolo_late_fusion:
-  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionConvGRU
+yolo_late_fusion_gru:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
   in_channels: 3
   num_classes: 1
   num_masks: 32
+  recurrent_type: "gru"
+  is_temporal: true            
+  temporal_mode: "recurrent"     
   freeze_backbone: True
-  is_temporal: true
-  temporal_mode: "recurrent"
   warmup_epochs: 5
+  temporal_target_layer: "yolo.backbone.stem.conv.weight"
+  pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+
+yolo_late_fusion_lstm:
+  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
+  in_channels: 3
+  num_classes: 1
+  num_masks: 32
+  recurrent_type: "lstm"   
+  is_temporal: true            
+  temporal_mode: "recurrent"
+  freeze_backbone: True
+  warmup_epochs: 5
+  temporal_target_layer: "yolo.backbone.stem.conv.weight"
   pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
 
 r_unet_gru:
@@ -85,3 +104,52 @@ r_unet_lstm:
   temporal_mode: "recurrent"
   warmup_epochs: 5
   pretrained_weights_path: "weights/Unet/best_fold0.pth"
+
+# ==============================================================================
+# MODELLI SMP CON ENCODER RESNET18 PRE-ADDESTRATO SU IMAGENET
+# ==============================================================================
+
+unet_resnet18:
+  _target_: surgical_copilot.models.segmentation_smp.SMPUNet
+  encoder_name: "resnet18"
+  encoder_weights: "imagenet"
+  in_channels: 3
+  classes: 1
+
+unet_plus_plus_resnet18:
+  _target_: surgical_copilot.models.segmentation_smp.SMPUNetPlusPlus
+  encoder_name: "resnet18"
+  encoder_weights: "imagenet"
+  in_channels: 3
+  classes: 1
+
+
+r_unet_resnet18_gru:
+  _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+  encoder_name: "resnet18"
+  encoder_weights: "imagenet"
+  in_channels: 3
+  classes: 1
+  recurrent_type: "gru"
+  bottleneck_dim: 512
+  freeze_backbone: True
+  is_temporal: true
+  temporal_mode: "recurrent"
+  temporal_target_layer: "model.encoder.conv1.weight"
+  warmup_epochs: 5
+  pretrained_weights_path: "weights/unet_resnet18/best_fold{fold_idx}.pth"
+
+r_unet_resnet18_lstm:
+  _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+  encoder_name: "resnet18"
+  encoder_weights: "imagenet"
+  in_channels: 3
+  classes: 1
+  recurrent_type: "lstm"
+  bottleneck_dim: 512
+  freeze_backbone: True
+  is_temporal: true
+  temporal_mode: "recurrent"
+  temporal_target_layer: "model.encoder.conv1.weight"
+  warmup_epochs: 5
+  pretrained_weights_path: "weights/unet_resnet18/best_fold{fold_idx}.pth"

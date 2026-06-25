@@ -249,6 +249,7 @@ class BenchmarkEngine:
             "stress": {}
         }
 
+        # define a fictitious epoch for logging purposes, since we are in the test phase
         test_epoch = self.cfg.trainer.trainer.max_epochs
 
         with torch.inference_mode():
@@ -263,6 +264,8 @@ class BenchmarkEngine:
 
                 total_model_time = 0.0
                 total_images = 0
+
+                logged_visuals = False
 
                 pbar = tqdm(self.test_loader, desc=f"TEST [{scenario_name}]")
 
@@ -297,6 +300,16 @@ class BenchmarkEngine:
 
                     self._update_metrics(preds, labels)
 
+                    if not logged_visuals:
+                        self.logger.log_qualitative_masks(
+                            images=x, 
+                            labels=labels, 
+                            preds=preds, 
+                            scenario_name=scenario_name, 
+                            epoch=test_epoch
+                        )
+                        logged_visuals = True
+
                     scores = {
                         "dice": self.dice_metric.aggregate().item(),
                         "hd95": self.hd95_metric.aggregate().item(),
@@ -322,6 +335,7 @@ class BenchmarkEngine:
                         robustness_drop = (clean_dice - scores["dice"]) / (clean_dice + 1e-8)
                         scores["drop"] = robustness_drop
                         metrics["stress"][scenario_name] = scores
+                        scores["drop_percent"] = robustness_drop * 100
                         drop_info = f" | Drop: {robustness_drop * 100:>5.1f}%"
 
                     print(f"[{scenario_name:<20}] Dice: {scores['dice']:.4f} | HD95: {scores['hd95']:>7.2f}{drop_info}")
@@ -382,8 +396,8 @@ class BenchmarkEngine:
 
         model_name = self.cfg.model_key 
         
-        #base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        base_dir = Path("/homes/cmininno/cvcs2026/Surgical-Copilot/weights")
+        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
+        #base_dir = Path("/homes/gauri/lab/weights")
         weights_dir = base_dir / model_name
         weights_dir.mkdir(parents=True, exist_ok=True)
         

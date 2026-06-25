@@ -32,10 +32,19 @@ class WandbLogger:
             "Metric_Dice/Baseline": metrics["baseline"]["dice"],
             "Metric_HD95/Baseline": metrics["baseline"]["hd95"],
             "Metric_IoU/Baseline": metrics["baseline"]["iou"],
-
-            "Metric_Temporal_Var/IoU": metrics["baseline"].get("temporal_iou", 0.0),
-            "Metric_Temporal_Var/Dice": metrics["baseline"].get("temporal_dice", 0.0),
         }
+
+        if "consistency" in metrics.get("baseline", {}):
+            log_dict.update({
+                "Metric_Temporal_Consistancy/IoU": metrics["baseline"]["consistency"].get("temporal_iou", 0.0),
+                "Metric_Temporal_Consistancy/Dice": metrics["baseline"]["consistency"].get("temporal_dice", 0.0),
+            })
+
+        if "interframe" in metrics.get("baseline", {}):
+            log_dict.update({
+                "Metric_Temporal_Interframe/IoU": metrics["baseline"]["interframe"].get("temporal_iou", 0.0),
+                "Metric_Temporal_Interframe/Dice": metrics["baseline"]["interframe"].get("temporal_dice", 0.0),
+            })
 
         for scenario, scores in metrics.get("stress", {}).items():
             log_dict[f"Metric_Dice/Stress_{scenario}"] = scores["dice"]
@@ -49,41 +58,38 @@ class WandbLogger:
         wandb.log(log_dict)
 
     def log_test_metrics(self, metrics: dict):
+
         if not self.is_active:
             return
 
-        test_log_dict = {
-            "Test_Baseline/Dice": metrics["baseline"]["dice"],
-            "Test_Baseline/HD95": metrics["baseline"]["hd95"],
-            "Test_Baseline/IoU": metrics["baseline"]["iou"],
-            "Test_System/Inference_FPS": metrics["baseline"].get("inference_fps", 0.0),
-        }
+        test_log_dict = {}
 
         columns = ["Scenario", "Dice", "HD95", "IoU", "Inference_FPS", "Drop (%)"]
         table = wandb.Table(columns=columns)
 
+        baseline = metrics.get("baseline", {})
         table.add_data(
             "baseline (clean)",
-            round(metrics["baseline"]["dice"], 4),
-            round(metrics["baseline"]["hd95"], 2),
-            round(metrics["baseline"]["iou"], 4),
-            round(metrics["baseline"].get("inference_fps", 0.0), 2),
+            round(baseline.get("dice", 0.0), 4),
+            round(baseline.get("hd95", 0.0), 2),
+            round(baseline.get("iou", 0.0), 4),
+            round(baseline.get("inference_fps", 0.0), 2),
             0.0
         )
 
         for scenario, scores in metrics.get("stress", {}).items():
             drop_val = scores.get("drop_percent", scores.get("drop", 0.0) * 100)
             
-            test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores["dice"]
-            test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores["hd95"]
-            test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores["iou"]
+            test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores.get("dice", 0.0)
+            test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores.get("hd95", 0.0)
+            test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores.get("iou", 0.0)
             test_log_dict[f"Test_Stress_Drop/{scenario}"] = scores.get("drop", drop_val / 100)
 
             table.add_data(
                 scenario,
-                round(scores["dice"], 4),
-                round(scores["hd95"], 2),
-                round(scores["iou"], 4),
+                round(scores.get("dice", 0.0), 4),
+                round(scores.get("hd95", 0.0), 2),
+                round(scores.get("iou", 0.0), 4),
                 round(scores.get("inference_fps", 0.0), 2),
                 round(drop_val, 2)
             )

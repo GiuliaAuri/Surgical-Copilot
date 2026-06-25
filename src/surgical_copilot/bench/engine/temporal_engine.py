@@ -3,6 +3,8 @@ import numpy as np
 
 from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
 from surgical_copilot.bench.engine.temporal_mode import TemporalMode
+from surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
+from surgical_copilot.bench.metrics.temporal_metrics.inter_frame import InterFrameTemporalMetric
 
 
 class TemporalBenchmarkEngine(BenchmarkEngine):
@@ -10,7 +12,6 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
     def __init__(self, *args, temporal_mode=TemporalMode.NONE, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # forza Enum
         if isinstance(temporal_mode, str):
             temporal_mode = TemporalMode(temporal_mode)
 
@@ -20,14 +21,25 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self.recurrent_state = None
         self.mask_prev = None
 
-        self.temporal_metrics = TemporalVariationMetric()
-   
-    def _reset_temporal_memory(self):
+        self.temporal_metrics = {
+            "consistency": TemporalConsistencyMetric(),
+            "interframe": InterFrameTemporalMetric()
+        }
+    
+    def _reset_temporal_state(self):
         self.recurrent_state = None
         self.mask_prev = None
-        self.temporal_metrics.reset()
 
-    def _prepare_inputs(self, batch, mask_prev=None):
+    def _reset_temporal_metrics(self):
+        
+        for metric in self.temporal_metrics.values():
+            metric.reset()
+    
+    def _reset_all(self):
+        self._reset_temporal_state()
+        self._reset_temporal_metrics()
+
+    def _prepare_inputs(self, batch):
 
         x, y = super()._prepare_inputs(batch)
 
@@ -37,7 +49,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             is_first = is_first.item()
 
         if is_first:
-            self._reset_temporal_memory()
+            self._reset_temporal_state()
 
         # EARLY FUSION
         if self.temporal_mode == TemporalMode.EARLY_FUSION:
@@ -55,7 +67,9 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
     def _update_metrics(self, preds, labels):
     
         super()._update_metrics(preds, labels)
-        self.temporal_metrics(preds, labels)
+
+        self.temporal_metrics["consistency"](preds, labels)
+        self.temporal_metrics["interframe"](preds)
 
     def _forward_step(self, x):
 
@@ -84,75 +98,30 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             self.mask_prev = (torch.sigmoid(logits.detach()) > 0.5).float()
     
     def _train(self):
-        self._reset_temporal_memory()
+        self._reset_all()
         return super()._train()
 
     def _validate(self, epoch: int):
-        self._reset_temporal_memory()
+        self._reset_all()
+
         metrics = super()._validate(epoch)
         
-        temp_scores = self.temporal_metrics.aggregate()
-        metrics["baseline"].update(temp_scores)
+        temp = {
+            **self.temporal_metrics["consistency"].aggregate(),
+            **self.temporal_metrics["interframe"].aggregate()
+        }
+        metrics["baseline"].update(temp)
         
         return metrics
 
     def _test(self):
-        self._reset_temporal_memory()
+        self._reset_all()
         metrics = super()._test()
         
-        temp_scores = self.temporal_metrics.aggregate()
-        metrics["baseline"].update(temp_scores)
+        temp = {
+            **self.temporal_metrics["consistency"].aggregate(),
+            **self.temporal_metrics["interframe"].aggregate()
+        }
+        metrics["baseline"].update(temp)
         
         return metrics
-    
-
-
-class TemporalVariationMetric:
-    
-    def __init__(self, smooth=1e-6):
-        self.smooth = smooth
-        self.reset()
-
-    def reset(self):
-        self.prev_pred = None
-        self.prev_label = None
-        self.ious = []
-        self.dices = []
-
-    def __call__(self, preds: torch.Tensor, labels: torch.Tensor):
-        # Binarizzazione
-        p_bin = preds > 0.5
-        l_bin = labels > 0.5
-
-        if self.prev_pred is not None and self.prev_label is not None:
-            # Calcolo dei delta (XOR logico per trovare i pixel cambiati)
-            delta_pred = (p_bin ^ self.prev_pred).float()
-            delta_label = (l_bin ^ self.prev_label).float()
-
-            # Operatori insiemistici
-            inter = torch.sum(delta_pred * delta_label, dim=(1, 2, 3))
-            sum_parts = torch.sum(delta_pred, dim=(1, 2, 3)) + torch.sum(delta_label, dim=(1, 2, 3))
-            union = sum_parts - inter
-
-            # Calcolo metriche per ogni elemento del batch
-            for i, u, s, d_gt in zip(inter, union, sum_parts, torch.sum(delta_label, dim=(1, 2, 3))):
-                if u > 0:
-                    iou = (i + self.smooth) / (u + self.smooth)
-                    dice = (2.0 * i + self.smooth) / (s + self.smooth)
-                    
-                    self.ious.append(iou.item())
-                    self.dices.append(dice.item())
-                elif d_gt == 0 and u == 0:
-                    # Perfetta consistenza: nessuno dei due è cambiato
-                    self.ious.append(1.0)
-                    self.dices.append(1.0)
-
-        # Update degli stati per t-1
-        self.prev_pred = p_bin.clone().detach()
-        self.prev_label = l_bin.clone().detach()
-
-    def aggregate(self):
-        return {
-            "temporal_iou": float(np.mean(self.ious)) if self.ious else 0.0,
-            "temporal_dice": float(np.mean(self.dices)) if self.dices else 0.0
-        }

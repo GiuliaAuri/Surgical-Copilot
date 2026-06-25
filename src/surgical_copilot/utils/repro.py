@@ -5,7 +5,7 @@ import torch
 
 def set_seed(seed: int) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
-    #os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
     random.seed(seed)
     np.random.seed(seed)

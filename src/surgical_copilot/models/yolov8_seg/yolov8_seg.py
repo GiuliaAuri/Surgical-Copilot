@@ -36,7 +36,8 @@ class C2f(nn.Module):
 
     def forward(self, x):
         y = list(self.cv1(x).chunk(2, 1))
-        y.extend(m(y[-1]) for m in self.m)
+        for m in self.m:                  
+            y.append(m(y[-1]))
         return self.cv2(torch.cat(y, 1))
 
 class SPPF(nn.Module):
