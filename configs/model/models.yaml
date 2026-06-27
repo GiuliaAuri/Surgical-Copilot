@@ -1,11 +1,19 @@
 # ==============================================================================
 # MODELLI BASELINE
 # ==============================================================================
+unet_plus_plus:
+  _target_: monai.networks.nets.BasicUNetPlusPlus
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  features: [32, 64, 128, 256, 512, 32]
+  deep_supervision: False
 
 unet_plus_plus_resnet18:
   _target_: surgical_copilot.models.segmentation_smp.SMPUNetPlusPlus
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
+  use_imagenet_norm: True
   in_channels: 3
   classes: 1
 
@@ -102,12 +110,22 @@ yolo_v8_late_fusion_lstm_warm:
 # ==============================================================================
 # UNET e tutte le varianti
 # ==============================================================================
+# BASELINE
+unet:
+  _target_: monai.networks.nets.UNet
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
 
-# BASELINE 
+# BASELINE + RESNET18
 unet_resnet18:
   _target_: surgical_copilot.models.segmentation_smp.SMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
+  use_imagenet_norm: True
   in_channels: 3
   classes: 1
 
@@ -116,6 +134,7 @@ early_fusion_unet_resnet18:
   _target_: surgical_copilot.models.segmentation_smp.SMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
+  use_imagenet_norm: True
   in_channels: 4 # <-- 3 RGB + 1 Maschera
   classes: 1
   is_temporal: true
@@ -127,6 +146,7 @@ r_unet_resnet18_gru_scratch:
   _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
+  use_imagenet_norm: True
   in_channels: 3
   classes: 1
   recurrent_type: "gru"
@@ -142,6 +162,7 @@ r_unet_resnet18_gru_warm:
   _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
+  use_imagenet_norm: True
   in_channels: 3
   classes: 1
   recurrent_type: "gru"
@@ -158,6 +179,7 @@ r_unet_resnet18_lstm_scratch:
   _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
+  use_imagenet_norm: True
   in_channels: 3
   classes: 1
   recurrent_type: "lstm"
@@ -172,6 +194,7 @@ r_unet_resnet18_lstm_warm:
   _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
   encoder_name: "resnet18"
   encoder_weights: "imagenet"
+  use_imagenet_norm: True
   in_channels: 3
   classes: 1
   recurrent_type: "lstm"
