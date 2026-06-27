@@ -48,6 +48,8 @@ class BenchmarkEngine:
         self.device = device
         self.fold_idx = fold_idx
 
+        self.accumulation_steps = self.cfg.trainer.trainer.get("accumulation_steps", 4)
+
         self.dice_metric = DiceMetric(reduction="mean")
         self.hd95_metric = HausdorffDistanceMetric(percentile=95)
         self.iou = MeanIoU(reduction="mean")
@@ -77,10 +79,28 @@ class BenchmarkEngine:
         return x, y
 
     def _forward_step(self, x):
-        return self.model(x)
+        logits = self.model(x)
+        return logits
 
-    def _post_forward_hook(self, logits):
-        pass
+    def _post_forward_hook(self, logits, y):
+        
+        # Gestione Deep Supervision
+        logits = logits[0] if isinstance(logits, list) else logits
+
+        # manage the Deep Supervision configuration
+        if isinstance(logits, list):
+            loss = sum(self.loss_fn(l, y) for l in logits) / len(logits)
+        else:
+            loss = self.loss_fn(logits, y)
+
+        return loss / self.accumulation_steps
+
+    def _post_processing(self, logits, y):
+        # Vectorized Post-processing on batch
+        preds = self.post_pred(logits)
+        labels = self.post_label(y)
+
+        return preds, labels
 
     def _update_metrics(self, preds, labels):
         self.dice_metric(y_pred=preds, y=labels)
@@ -92,7 +112,6 @@ class BenchmarkEngine:
         self.model.train()
         losses = []
 
-        accumulation_steps = self.cfg.trainer.trainer.get("accumulation_steps", 4)
         self.optimizer.zero_grad()
 
         pbar = tqdm(self.train_loader, desc="Training")
@@ -102,32 +121,19 @@ class BenchmarkEngine:
             x, y = self._prepare_inputs(batch)
 
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                
                 logits = self._forward_step(x)
+                loss = self._post_forward_hook(logits, y)
                 
-                # Gestione Deep Supervision
-                main_logits = logits[0] if isinstance(logits, list) else logits
-
-                self._post_forward_hook(main_logits)
-
-                # manage the Deep Supervision configuration
-                if isinstance(logits, list):
-                    loss = sum(self.loss_fn(l, y) for l in logits) / len(logits)
-                else:
-                    loss = self.loss_fn(logits, y)
-
-                loss = loss / accumulation_steps
-
             if self.scaler is not None:
 
                 self.scaler.scale(loss).backward()
 
-                if ((i + 1) % accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
+                if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
 
                     # Apply clipping ONLY for temporal models
-                    if self.is_temporal:
-                        self.scaler.unscale_(self.optimizer)
-                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    #if self.is_temporal:
+                    #    self.scaler.unscale_(self.optimizer)
+                    #    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                         
                     self.scaler.step(self.optimizer)
                     self.scaler.update()
@@ -136,11 +142,11 @@ class BenchmarkEngine:
 
                 loss.backward()
 
-                if ((i + 1) % accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
+                if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
                     self.optimizer.step()
                     self.optimizer.zero_grad()
 
-            real_loss = loss.item() * accumulation_steps
+            real_loss = loss.item() * self.accumulation_steps
             losses.append(real_loss)
             pbar.set_postfix({"loss": real_loss})
 
@@ -149,7 +155,7 @@ class BenchmarkEngine:
 
     def _validate(self, epoch: int) -> dict:
 
-        print("\n[*] Evaluation & Stress Test")
+        print("\n[*] Evaluation")
         self.model.eval()
         clean_pipeline  = PerturbationPipelines.get_eval_scenarios()["clean"]
 
@@ -191,10 +197,7 @@ class BenchmarkEngine:
                 start_batch = time.perf_counter()
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                     logits = self._forward_step(x)
-                
-                main_logits = logits[0] if isinstance(logits, list) else logits
-
-                self._post_forward_hook(main_logits)
+                    loss = self._post_forward_hook(logits, y)
 
                 if self.device.type == "cuda":
                     torch.cuda.synchronize()
@@ -203,17 +206,9 @@ class BenchmarkEngine:
 
                 # compute FPS 
                 total_model_time += batch_time
+                val_losses.append(loss.item() * self.accumulation_steps)
                     
-                #  Deep Supervision
-                main_logits = logits[0] if isinstance(logits, list) else logits
-
-                loss = self.loss_fn(main_logits, y)
-                val_losses.append(loss.item())
-
-                # Vectorized Post-processing on batch
-                preds = self.post_pred(main_logits)
-                labels = self.post_label(y)
-                
+                preds, labels = self._post_processing(logits, y)
                 self._update_metrics(preds, labels)
 
                 # Log visual results 
@@ -281,6 +276,8 @@ class BenchmarkEngine:
                     start_time = time.perf_counter()
 
                     logits = self._forward_step(x)
+                    
+                    main_logits = logits[0] if isinstance(logits, list) else logits
 
                     if self.device.type == "cuda":
                         torch.cuda.synchronize()
@@ -288,16 +285,9 @@ class BenchmarkEngine:
                     batch_time = time.perf_counter() - start_time
                     total_model_time += batch_time
                     total_images += x.shape[0]
-
-                    # deep supervision handling
-                    main_logits = logits[0] if isinstance(logits, list) else logits
-
-                    self._post_forward_hook(main_logits)
                     
                     # Post-processing e metriche
-                    preds = self.post_pred(main_logits)
-                    labels = self.post_label(y)
-
+                    preds, labels = self._post_processing(main_logits, y)
                     self._update_metrics(preds, labels)
 
                     if not logged_visuals:
@@ -308,24 +298,15 @@ class BenchmarkEngine:
                             scenario_name=scenario_name, 
                             epoch=test_epoch
                         )
+
                         logged_visuals = True
 
                     scores = {
                         "dice": self.dice_metric.aggregate().item(),
                         "hd95": self.hd95_metric.aggregate().item(),
                         "iou": self.iou.aggregate().item(),
-                        "inference_fps": total_images / max(total_model_time, 1e-8)}
-                    
-                    if not logged_visuals:
-                        if wandb.run is not None:
-                            self.logger.log_qualitative_masks(
-                                images=x, 
-                                labels=labels, 
-                                preds=preds, 
-                                scenario_name=scenario_name, 
-                                epoch=test_epoch
-                            )
-                        logged_visuals = True
+                        "inference_fps": total_images / max(total_model_time, 1e-8)
+                    }
                     
                     if scenario_name == "clean":
                         metrics["baseline"] = scores
@@ -333,6 +314,7 @@ class BenchmarkEngine:
                     else:
                         clean_dice = metrics["baseline"].get("dice", 1e-8)
                         robustness_drop = (clean_dice - scores["dice"]) / (clean_dice + 1e-8)
+
                         scores["drop"] = robustness_drop
                         metrics["stress"][scenario_name] = scores
                         scores["drop_percent"] = robustness_drop * 100

@@ -15,12 +15,12 @@ unet_plus_plus:
   features: [32, 64, 128, 256, 512, 32]
   deep_supervision: False
 
-swin_unet:
-    _target_: surgical_copilot.models.vision_trasformer_swin.swin_unet.SwinUnet 
-    img_size: [640, 480]
-    in_chans: 3
-    num_classes: 1
-    window_size: 8
+#swin_unet:
+#    _target_: surgical_copilot.models.vision_trasformer_swin.swin_unet.SwinUnet 
+#    img_size: [640, 480]
+#    in_chans: 3
+#    num_classes: 1
+#    window_size: 8
   
 swin_unetr:
     _target_: monai.networks.nets.SwinUNETR
@@ -40,7 +40,16 @@ yolo_v8_seg:
 #  MODELLI TEMPORALI
 # ==============================================================================
 
-yolo_v8_seg_temporal:
+#yolo_v8_seg_temporal:
+#  _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
+#  in_channels: 4   # 3 channels RGB + 1 mask t-1 channel
+#  num_classes: 1
+#  num_masks: 32
+#  is_temporal: true
+#  temporal_mode: "early_fusion"
+#  temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
+
+yolo_early_fusion:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
   in_channels: 4   # 3 channels RGB + 1 mask t-1 channel
   num_classes: 1
@@ -64,7 +73,7 @@ yolo_late_fusion_gru:
 
 yolo_late_fusion_lstm:
   _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
-  in_channels: 3
+  in_channels: 3 
   num_classes: 1
   num_masks: 32
   recurrent_type: "lstm"   
@@ -74,6 +83,22 @@ yolo_late_fusion_lstm:
   warmup_epochs: 5
   temporal_target_layer: "yolo.backbone.stem.conv.weight"
   pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+
+#unet_early_fusion:
+#  _target_: monai.networks.nets.UNet
+#  spatial_dims: 2 # 3 channels RGB + 1 mask t-1 channel
+#  in_channels: 4
+#  out_channels: 1
+#  channels: [32, 64, 128, 256, 512]
+#  strides: [2, 2, 2, 2]
+#  num_res_units: 2
+#
+#unet_resnet18_early_fusion:
+#  _target_: surgical_copilot.models.segmentation_smp.SMPUNet
+#  encoder_name: "resnet18"
+#  encoder_weights: "imagenet"
+#  in_channels: 4 # 3 channels RGB + 1 mask t-1 channel
+#  classes: 1
 
 r_unet_gru:
   _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
@@ -123,6 +148,13 @@ unet_plus_plus_resnet18:
   in_channels: 3
   classes: 1
 
+resnet18_unetr:
+    _target_: monai.networks.nets.FlexibleUNETR
+    in_channels: 3
+    out_channels: 1
+    backbone: "resnet18"
+    pretrained: True       
+    spatial_dims: 2
 
 r_unet_resnet18_gru:
   _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet

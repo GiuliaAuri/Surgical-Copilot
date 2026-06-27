@@ -48,55 +48,69 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         if isinstance(is_first, torch.Tensor):
             is_first = is_first.item()
 
+        # to avoid temporal state contamination, reset the memory states at the beginning of each new sequence
         if is_first:
             self._reset_temporal_state()
 
-        # EARLY FUSION
-        if self.temporal_mode == TemporalMode.EARLY_FUSION:
-
-            if self.mask_prev is None:
-                self.mask_prev = torch.zeros(
-                    (x.shape[0], 1, x.shape[2], x.shape[3]),
-                    device=self.device
-                )
-
-            x = torch.cat([x, self.mask_prev], dim=1)
-
         return x, y
+    
+    def _forward_step(self, x, y):
+
+        B, T, C, H, W = x.shape
+        total_loss = 0.0
+        all_logits = []
+
+        for t in range(T):
+            x_t = x[:, t] # (B, C, H, W)
+            y_t = y[:, t] # (B, 1, H, W)
+
+            # EARLY FUSION
+            if self.temporal_mode == TemporalMode.EARLY_FUSION:
+
+                if self.mask_prev is None:
+                    self.mask_prev = torch.zeros(
+                        (x.shape[0], 1, x.shape[2], x.shape[3]),
+                        device=self.device
+                    )
+
+                x = torch.cat([x, self.mask_prev], dim=1)
+
+            # LATE FUSION
+            elif self.temporal_mode == TemporalMode.LATE_FUSION:
+                logits_t, self.recurrent_state = self.model(x_t, self.recurrent_state)
+
+            # Manage Deep Supervision and Loss al tempo t
+            if isinstance(logits_t, list):
+                step_loss = sum(self.loss_fn(l, y_t) for l in logits_t) / len(logits_t)
+                main_logits_t = logits_t[0]
+            else:
+                step_loss = self.loss_fn(logits_t, y_t)
+                main_logits_t = logits_t
+
+            total_loss += step_loss
+            all_logits.append(main_logits_t)
+
+            # Update memory for Early Fusion
+            if self.temporal_mode == TemporalMode.EARLY_FUSION:
+                self.mask_prev = (torch.sigmoid(main_logits_t.detach()) > 0.5).float()
+    
+        stacked_logits = torch.stack(all_logits, dim=1) 
+        avg_loss = (total_loss / T) / self.accumulation_steps
+
+        return avg_loss, stacked_logits    
     
     def _update_metrics(self, preds, labels):
     
-        super()._update_metrics(preds, labels)
+        B, T = preds.shape[:2]
+        
+        # Fuse B and T to parallelize the computation: (B*T, C, H, W), MONAI wants 4D Tensors for metrics
+        preds_flat = preds.reshape(B * T, *preds.shape[2:])
+        labels_flat = labels.reshape(B * T, *labels.shape[2:])
+        super()._update_metrics(preds_flat, labels_flat)
 
         self.temporal_metrics["consistency"](preds, labels)
         self.temporal_metrics["interframe"](preds)
 
-    def _forward_step(self, x):
-
-        if self.temporal_mode == TemporalMode.RECURRENT:
-
-            outputs, self.recurrent_state = self.model(
-                x,
-                self.recurrent_state
-            )
-
-            # safe detach for GRU/LSTM
-            if isinstance(self.recurrent_state, tuple):
-                self.recurrent_state = tuple(s.detach() for s in self.recurrent_state)
-            else:
-                self.recurrent_state = self.recurrent_state.detach()
-
-        else:
-            outputs = self.model(x)
-
-        return outputs
-    
-
-    # UPDATE MEMORY (EARLY FUSION)
-    def _post_forward_hook(self, logits):
-        if self.temporal_mode == TemporalMode.EARLY_FUSION:
-            self.mask_prev = (torch.sigmoid(logits.detach()) > 0.5).float()
-    
     def _train(self):
         self._reset_all()
         return super()._train()

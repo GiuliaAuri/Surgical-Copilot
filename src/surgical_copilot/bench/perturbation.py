@@ -141,7 +141,6 @@ class PerturbationPipelines:
 
             # Appearance transformation
             Rand2DElasticd(keys=["image", "label"], prob=0.2, spacing=(20, 20), magnitude_range=(1, 2), mode=("bilinear", "nearest")),
-            RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5))
         ])
 
     @staticmethod

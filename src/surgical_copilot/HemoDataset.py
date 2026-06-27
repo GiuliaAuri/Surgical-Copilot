@@ -3,7 +3,7 @@ from pathlib import Path
 from collections import defaultdict
 import torch
 
-from sklearn.model_selection import GroupKFold, KFold
+from sklearn.model_selection import GroupKFold, GroupShuffleSplit
 
 from monai.data import CacheDataset, DataLoader
 from monai.transforms import (
@@ -65,21 +65,18 @@ class HemosetDataSet:
         self.base_transforms = Compose([
             LoadImaged(keys=["image", "label"], reader="PILReader"),
             EnsureChannelFirstd(keys=["image", "label"]),
-            ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            AsDiscreted(keys=["label"], threshold=0.5),
+            ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            
+            AsDiscreted(keys=["label"], threshold=0.5),
             Resized(keys=["image", "label"], spatial_size=self.image_size, mode=("bilinear", "nearest")),
             ToTensord(keys=["image", "label"], dtype=torch.float32),
         ])
 
-    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None, temporal_mode=False):
+    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
         patients = sorted(list(self.patient_data.keys()))
-        self.rng.shuffle(patients)
 
         if n_splits > len(patients):
             raise ValueError("n_splits > numero di pig")
-        
-        groups = patients
-        patients = patients.copy()
         
         gkf = GroupKFold(n_splits=n_splits)
 
@@ -87,7 +84,7 @@ class HemosetDataSet:
                 gkf.split(
                     X=patients,
                     y=None,
-                    groups=groups
+                    groups=patients
                 )
             )
 
@@ -96,20 +93,18 @@ class HemosetDataSet:
 
         train_val_idx, test_idx = folds[fold_idx]
 
-        train_val_patients = [
-            patients[i]
-            for i in train_val_idx
-        ]
+        train_val_patients = [patients[i] for i in train_val_idx]
 
-        test_patients = [
-            patients[i]
-            for i in test_idx
-        ]
+        test_patients = [patients[i] for i in test_idx]
 
-        val_size = max(1, int(0.25 * len(train_val_patients)))
+        gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
 
-        val_patients = train_val_patients[-val_size:]
-        train_patients = train_val_patients[:-val_size]
+        tv_idx, val_idx = next(
+            gss.split(train_val_patients, groups=train_val_patients)
+        )
+
+        train_patients = [train_val_patients[i] for i in tv_idx]
+        val_patients = [train_val_patients[i] for i in val_idx]
 
         print("\n[*] Fold info")
         print(f"Train pigs: {train_patients}")
@@ -146,9 +141,7 @@ class HemosetDataSet:
         val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
         test_ds = CacheDataset(test_files, transform=self.base_transforms, cache_rate=cache_rate)
 
-
-        do_shuffle = not temporal_mode
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=do_shuffle, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
         val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
 
@@ -177,3 +170,147 @@ class HemosetDataSet:
             sample = self.base_transforms(sample)
 
         return sample
+
+class HemosetDataSequences(HemosetDataSet):
+    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42, sequence_length=5, stride=1):
+        super().__init__(root_dir, image_size, seed)
+
+        self.sequence_length = sequence_length
+        self.stride = stride
+
+        existing_transforms = list(self.base_transforms.transforms)
+        
+        existing_transforms.append(
+            UnflattenSequenced(keys=["image", "label"], sequence_length=self.sequence_length)
+        )
+        
+        self.base_transforms = Compose(existing_transforms)
+
+    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
+        
+        patients = sorted(list(self.patient_data.keys()))
+
+        if n_splits > len(patients):
+            raise ValueError("n_splits > numero di pig")
+        
+        gkf = GroupKFold(n_splits=n_splits)
+
+        folds = list(
+                gkf.split(
+                    X=patients,
+                    y=None,
+                    groups=patients
+                )
+            )
+
+        if fold_idx >= len(folds):
+            raise ValueError(f"fold_idx deve essere < {n_splits}")
+
+        train_val_idx, test_idx = folds[fold_idx]
+
+        train_val_patients = [patients[i] for i in train_val_idx]
+
+        test_patients = [patients[i] for i in test_idx]
+
+        gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
+
+        tv_idx, val_idx = next(
+            gss.split(train_val_patients, groups=train_val_patients)
+        )
+
+        train_patients = [train_val_patients[i] for i in tv_idx]
+        val_patients = [train_val_patients[i] for i in val_idx]
+
+        print("\n[*] Fold info")
+        print(f"Train pigs: {train_patients}")
+        print(f"Val pigs:   {val_patients}")
+        print(f"Test pigs:  {test_patients}")
+
+        train_files = self._create_sliding_window(train_patients)
+        val_files = self._create_sliding_window(val_patients)
+        test_files = self._create_sliding_window(test_patients)
+
+        print(
+            f"[*] Sequence Samples "
+            f"train={len(train_files)} "
+            f"val={len(val_files)} "
+            f"test={len(test_files)}"
+        )
+
+        train_compose = (Compose([self.base_transforms,train_transforms]) if train_transforms  else self.base_transforms)
+
+        train_ds = CacheDataset(train_files, transform=train_compose, cache_rate=cache_rate)
+        val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
+        test_ds = CacheDataset(test_files, transform=self.base_transforms, cache_rate=cache_rate)
+
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
+        val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
+        test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
+
+        return train_loader, val_loader, test_loader
+
+    def _create_sliding_window(self, patients_list):
+        sequences = []
+        
+        for p in patients_list:
+            patient_frames = self.patient_data[p]
+            seq_len = self.sequence_length
+            
+            # Sliding window with stride
+            for i in range(0, len(patient_frames) - seq_len + 1, self.stride):
+                window = patient_frames[i : i + seq_len]
+                
+                seq_sample = {
+                    "image": [frame["image"] for frame in window],
+                    "label": [frame["label"] for frame in window]
+                }
+                sequences.append(seq_sample)
+                
+        return sequences
+    
+    def get_sample(self, patient_id=None, index=None, transform=True):
+        if patient_id:
+            if patient_id not in self.patient_data:
+                raise ValueError(f"{patient_id} non esiste nel dataset")
+            patients_to_sample = [patient_id]
+        else:
+            patients_to_sample = list(self.patient_data.keys())
+
+        sequences = self._create_sliding_window(patients_to_sample)
+
+        if not sequences:
+            raise RuntimeError("Nessuna sequenza disponibile.")
+
+        if index is None:
+            sample = self.rng.choice(sequences)
+        else:
+            sample = sequences[index % len(sequences)]
+
+        if transform:
+            sample = self.base_transforms(sample)
+
+        return sample
+    
+# -----
+
+from monai.transforms import MapTransform, Compose
+
+class UnflattenSequenced(MapTransform):
+    """
+    Reshape the tensors from (S*C, H, W) to (S, C, H, W).
+    """
+    def __init__(self, keys, sequence_length, allow_missing_keys=False):
+        super().__init__(keys, allow_missing_keys)
+        self.seq_len = sequence_length
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            if key in d:
+                SC, H, W = d[key].shape
+                
+                C = SC // self.seq_len
+                
+                d[key] = d[key].view(self.seq_len, C, H, W)
+                
+        return d
