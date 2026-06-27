@@ -24,9 +24,11 @@ class KFoldRunner:
         # Determine the model key and check if it is temporal
         self.model_key = self.cfg.get("model_key", "unknown_model")
         self.model_cfg = self.cfg.model.get(self.model_key, {})
+        
         raw = self.model_cfg.get("temporal_mode", "none")
-
         self.temporal_mode = TemporalMode(raw)
+        self.model_cfg.pop("temporal_mode", None)  # Remove temporal_mode from model_cfg if present
+
 
     def run(self):
 
@@ -90,14 +92,10 @@ class KFoldRunner:
 
     def _build_fold(self, dataset, fold):
 
-        model_cfg = OmegaConf.to_container(
-            self.cfg.model[self.cfg.model_key],
-            resolve=True
-        )
+        if self.temporal_mode != TemporalMode.NONE:
+            target_layer = self.model_cfg.get("temporal_target_layer", None)
 
-        target_layer = model_cfg.get("temporal_target_layer", None)
-
-        model = instantiate(model_cfg).to(self.device)
+        model = instantiate(self.model_cfg).to(self.device)
 
         if self.temporal_mode != TemporalMode.NONE:
             model = load_or_create_temporal_weights(
