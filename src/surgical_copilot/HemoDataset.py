@@ -125,9 +125,6 @@ class HemosetDataSet:
         for p in test_patients:
             test_files.extend(self.patient_data[p])
 
-        if not temporal_mode:
-            self.rng.shuffle(train_files)
-
         print(
             f"[*] Samples "
             f"train={len(train_files)} "

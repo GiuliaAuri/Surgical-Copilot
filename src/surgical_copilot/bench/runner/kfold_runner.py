@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
 from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
 from surgical_copilot.bench.engine.temporal_engine import TemporalBenchmarkEngine
+from surgical_copilot.bench.engine.temporal_mode import TemporalMode
 from surgical_copilot.HemoDataset import HemosetDataSet, HemosetDataSequences
 from surgical_copilot.bench.perturbation import PerturbationPipelines
 from surgical_copilot.transfer_weights import load_or_create_temporal_weights
@@ -20,13 +21,19 @@ class KFoldRunner:
         self.cfg = cfg
         self.device = torch.device(cfg.device if torch.cuda.is_available() else "cpu")
 
+        # Determine the model key and check if it is temporal
+        self.model_key = self.cfg.get("model_key", "unknown_model")
+        self.model_cfg = self.cfg.model.get(self.model_key, {})
+        raw = self.model_cfg.get("temporal_mode", "none")
+
+        self.temporal_mode = TemporalMode(raw)
+
     def run(self):
 
         set_seed(self.cfg.seed) # for reproducibility
-        temporal = self.cfg.data.temporal
 
         # build the dataset based on whether temporal data is required or not
-        dataset_cls = HemosetDataSequences if self.cfg.data.temporal else HemosetDataSet
+        dataset_cls = HemosetDataSequences if self.temporal_mode != TemporalMode.NONE else HemosetDataSet
 
         dataset_kwargs = {
             "root_dir": self.cfg.data.root_dir,
@@ -34,7 +41,7 @@ class KFoldRunner:
             "image_size": self.cfg.data.img_size,
         }
 
-        if temporal:
+        if self.temporal_mode != TemporalMode.NONE:
             dataset_kwargs["sequence_length"] = self.cfg.data.sequence_length
             dataset_kwargs["stride"] = self.cfg.data.stride
 
@@ -44,67 +51,55 @@ class KFoldRunner:
 
         exp_name = self.cfg.logging.get("exp_tag", "baseline")
 
-        # Determine the model key and check if it is temporal
-        model_key = self.cfg.get("model_key", "unknown_model")
-        model_cfg_test = OmegaConf.select(self.cfg, f"model.{model_key}")
-        is_temporal = model_cfg_test.get("is_temporal", False)
+        print(f"\n{'='*50}\n[Esperimento] Modello: {self.model_key} | Modalità: {self.temporal_mode.value.upper()}\n{'='*50}")
+        
+        metrics = []
 
-        modes_to_test = ["early_fusion", "late_fusion"] if is_temporal else ["none"]
+        for fold in range(self.cfg.data.n_folds):
 
-        for mode in modes_to_test:
-            print(f"\n{'='*50}\n[Esperimento] Modello: {model_key} | Modalità: {mode.upper()}\n{'='*50}")
-            
-            mode_metrics = []
+            print(f"\n[Fold {fold+1}/{self.cfg.data.n_folds}]")
 
-            for fold in range(self.cfg.data.n_folds):
+            current_exp_name = f"{exp_name}_{self.temporal_mode}"
 
-                print(f"\n[Fold {fold+1}/{self.cfg.data.n_folds}]")
+            if self.cfg.logging.wandb_enabled:
+                wandb.init(
+                    project=self.cfg.logging.project,
+                    group=exp_name, 
+                    name=f"{self.model_key}_{current_exp_name}_fold_{fold}",
+                    config=OmegaConf.to_container(self.cfg, resolve=True),
+                    reinit=True,
+                    tags=[exp_name, f"fold_{fold}"]
+                )
 
-                current_exp_name = f"{exp_name}_{mode}"
+            model, loaders, engine, optimizer = self._build_fold(dataset, fold)
 
-                if self.cfg.logging.wandb_enabled:
-                    wandb.init(
-                        project=self.cfg.logging.project,
-                        group=exp_name, 
-                        name=f"{model_key}_{exp_name}_fold_{fold}",
-                        config=OmegaConf.to_container(self.cfg, resolve=True),
-                        reinit=True,
-                        tags=[exp_name, f"fold_{fold}"]
-                    )
-
-                model, loaders, engine, optimizer = self._build_fold(dataset, fold, target_mode=mode)
-
-                try:
-                    fold_result = engine.run()
-                    mode_metrics.append(fold_result)
-                finally:
-                    if self.cfg.logging.wandb_enabled:
-                        wandb.finish()
-                    self._cleanup(model, engine, loaders, optimizer)
-
+            try:
+                fold_result = engine.run()
+                metrics.append(fold_result)
+            finally:
                 if self.cfg.logging.wandb_enabled:
                     wandb.finish()
-
                 self._cleanup(model, engine, loaders, optimizer)
 
-            all_metrics[mode] = mode_metrics
+            if self.cfg.logging.wandb_enabled:
+                wandb.finish()
+
+        all_metrics = metrics
 
         return all_metrics
 
-    def _build_fold(self, dataset, fold, target_mode="none"):
+    def _build_fold(self, dataset, fold):
 
         model_cfg = OmegaConf.to_container(
             self.cfg.model[self.cfg.model_key],
             resolve=True
         )
 
-        is_temporal = model_cfg.pop("is_temporal", False)
-        #temporal_mode_str = model_cfg.pop("temporal_mode", "none") 
-        target_layer = model_cfg.pop("temporal_target_layer", None)
+        target_layer = model_cfg.get("temporal_target_layer", None)
 
         model = instantiate(model_cfg).to(self.device)
 
-        if is_temporal:
+        if self.temporal_mode != TemporalMode.NONE:
             model = load_or_create_temporal_weights(
                 model=model,
                 fold_idx=fold,
@@ -112,7 +107,7 @@ class KFoldRunner:
                 target_layer_name=target_layer
             )
 
-        batch_size = 1 if is_temporal else self.cfg.trainer.trainer.batch_size
+        batch_size = self.cfg.trainer.trainer.batch_size
 
         train_loader, val_loader, test_loader = dataset.get_loaders(
             fold_idx=fold,
@@ -120,7 +115,6 @@ class KFoldRunner:
             batch_size=batch_size,
             num_workers=self.cfg.trainer.trainer.num_workers,
             train_transforms=PerturbationPipelines.get_train_pipeline(),
-            temporal_mode=is_temporal
         )
 
         optimizer = instantiate(self.cfg.trainer.optimizer, params=model.parameters())
@@ -130,7 +124,7 @@ class KFoldRunner:
         loss_fn = instantiate(self.cfg.trainer.loss)
         scaler = instantiate(self.cfg.trainer.scaler)
 
-        engine_cls = TemporalBenchmarkEngine if is_temporal else BenchmarkEngine
+        engine_cls = TemporalBenchmarkEngine if self.temporal_mode != TemporalMode.NONE else BenchmarkEngine
 
         engine_kwargs = {
             "model": model,
@@ -146,8 +140,8 @@ class KFoldRunner:
             "fold_idx": fold
         }
 
-        if is_temporal:
-            engine_kwargs["temporal_mode"] = target_mode
+        if self.temporal_mode != TemporalMode.NONE:
+            engine_kwargs["temporal_mode"] = self.temporal_mode
 
         engine = engine_cls(**engine_kwargs)
 
