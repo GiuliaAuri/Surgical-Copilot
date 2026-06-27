@@ -18,9 +18,10 @@ from monai.transforms import (
 )
 
 class HemosetDataSet:
-    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42):
+    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42, use_imagenet_norm=False):
         self.root_dir = Path(root_dir)
         self.image_size = image_size
+        self.use_imagenet_norm = use_imagenet_norm
 
         self.rng = random.Random(seed)
 

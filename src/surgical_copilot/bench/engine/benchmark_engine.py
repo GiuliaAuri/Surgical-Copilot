@@ -81,6 +81,9 @@ class BenchmarkEngine:
         self.dice_metric(y_pred=preds, y=labels)
         self.hd95_metric(y_pred=preds, y=labels)
         self.iou(y_pred=preds, y=labels)
+        
+        if hasattr(self, "_update_temporal_metrics"):
+            self._update_temporal_metrics(preds, labels)
 
     def _train(self):
 
