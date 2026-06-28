@@ -14,12 +14,14 @@ from monai.transforms import (
     Resized,
     AsDiscreted,
     ToTensord,
+    NormalizeIntensityd,
 )
 
 class HemosetDataSet:
-    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42):
+    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42, use_imagenet_norm=False):
         self.root_dir = Path(root_dir)
         self.image_size = image_size
+        self.use_imagenet_norm = use_imagenet_norm
 
         self.rng = random.Random(seed)
 
@@ -62,14 +64,29 @@ class HemosetDataSet:
         print(f"[*] Dataset caricato: trovati {len(self.patient_data)} subjects (pigN) distinti.")
         print(f"[*] Totale frame validi: {sum(len(frames) for frames in self.patient_data.values())}")
 
-        self.base_transforms = Compose([
+        transforms_list = [
             LoadImaged(keys=["image", "label"], reader="PILReader"),
             EnsureChannelFirstd(keys=["image", "label"]),
-            ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            
+            ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
+        ]
+
+        if use_imagenet_norm:
+            print("[*] Normalizzazione ImageNet ATTIVATA.")
+            transforms_list.append(
+                NormalizeIntensityd(
+                    keys=["image"], 
+                    subtrahend=[0.485, 0.456, 0.406], 
+                    divisor=[0.229, 0.224, 0.225], 
+                    channel_wise=True
+                )
+            )
+
+        transforms_list.extend([
             AsDiscreted(keys=["label"], threshold=0.5),
             Resized(keys=["image", "label"], spatial_size=self.image_size, mode=("bilinear", "nearest")),
             ToTensord(keys=["image", "label"], dtype=torch.float32),
         ])
+        self.base_transforms = Compose(transforms_list)
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
