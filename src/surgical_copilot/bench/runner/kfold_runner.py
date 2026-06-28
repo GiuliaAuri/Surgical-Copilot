@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
 from surgical_copilot.bench.engine.temporal_engine import TemporalBenchmarkEngine
 from surgical_copilot.bench.engine.temporal_mode import TemporalMode
-from surgical_copilot.HemoDataset import HemosetDataSet, HemosetDataSequences
+from surgical_copilot.HemoDataset import HemosetDataSet, HemosetDataSequences, HemosetEarlyFusion
 from surgical_copilot.bench.perturbation import PerturbationPipelines
 from surgical_copilot.transfer_weights import load_or_create_temporal_weights
 from surgical_copilot.utils.repro import set_seed
@@ -24,18 +24,18 @@ class KFoldRunner:
         # Determine the model key and check if it is temporal
         self.model_key = self.cfg.get("model_key", "unknown_model")
         self.model_cfg = self.cfg.model.get(self.model_key, {})
-        
         raw = self.model_cfg.get("temporal_mode", "none")
-        self.temporal_mode = TemporalMode(raw)
-        self.model_cfg.pop("temporal_mode", None)  # Remove temporal_mode from model_cfg if present
 
+        self.temporal_mode = TemporalMode(raw)
 
     def run(self):
 
         set_seed(self.cfg.seed) # for reproducibility
 
         # build the dataset based on whether temporal data is required or not
-        dataset_cls = HemosetDataSequences if self.temporal_mode != TemporalMode.NONE else HemosetDataSet
+        if self.temporal_mode == TemporalMode.NONE: dataset_cls = HemosetDataSet
+        elif self.temporal_mode == TemporalMode.EARLY_FUSION: dataset_cls = HemosetEarlyFusion
+        else: dataset_cls = HemosetDataSequences
 
         dataset_kwargs = {
             "root_dir": self.cfg.data.root_dir,
@@ -43,9 +43,9 @@ class KFoldRunner:
             "image_size": self.cfg.data.img_size,
         }
 
-        if self.temporal_mode != TemporalMode.NONE:
+        if self.temporal_mode == TemporalMode.LATE_FUSION:
             dataset_kwargs["sequence_length"] = self.cfg.data.sequence_length
-            dataset_kwargs["stride"] = self.cfg.data.stride
+            dataset_kwargs["overlapping"] = self.cfg.data.overlapping
 
         dataset = dataset_cls(**dataset_kwargs)
 
@@ -92,10 +92,17 @@ class KFoldRunner:
 
     def _build_fold(self, dataset, fold):
 
-        if self.temporal_mode != TemporalMode.NONE:
-            target_layer = self.model_cfg.get("temporal_target_layer", None)
+        model_cfg = OmegaConf.to_container(
+            self.cfg.model[self.cfg.model_key],
+            resolve=True
+        )
 
-        model = instantiate(self.model_cfg).to(self.device)
+        model_cfg.pop("temporal_mode", None)  # Remove temporal_mode from model_cfg if present
+
+        if self.temporal_mode != TemporalMode.NONE:
+            target_layer = model_cfg.get("temporal_target_layer", None)
+
+        model = instantiate(model_cfg).to(self.device)
 
         if self.temporal_mode != TemporalMode.NONE:
             model = load_or_create_temporal_weights(

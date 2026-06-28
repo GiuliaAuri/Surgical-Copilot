@@ -78,12 +78,9 @@ class BenchmarkEngine:
         y = batch["label"].to(self.device)
         return x, y
 
-    def _forward_step(self, x):
+    def _forward_step(self, x, y):
         logits = self.model(x)
-        return logits
 
-    def _post_forward_hook(self, logits, y):
-        
         # Gestione Deep Supervision
         logits = logits[0] if isinstance(logits, list) else logits
 
@@ -93,7 +90,30 @@ class BenchmarkEngine:
         else:
             loss = self.loss_fn(logits, y)
 
-        return loss / self.accumulation_steps
+        return {
+            "logits": logits,
+            "loss": loss / self.accumulation_steps
+        }        
+
+    def _scale_loss(self, i, loss):
+
+        if self.scaler is not None:
+
+            self.scaler.scale(loss).backward()
+
+            if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
+
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                self.optimizer.zero_grad(set_to_none=True)
+        else:
+
+            loss.backward()
+
+            if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
+                
+                self.optimizer.step()
+                self.optimizer.zero_grad()
 
     def _post_processing(self, logits, y):
         # Vectorized Post-processing on batch
@@ -124,31 +144,11 @@ class BenchmarkEngine:
             x, y = self._prepare_inputs(batch)
 
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                logits = self._forward_step(x)
-                loss = self._post_forward_hook(logits, y)
-                
-            if self.scaler is not None:
-
-                self.scaler.scale(loss).backward()
-
-                if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
-
-                    # Apply clipping ONLY for temporal models
-                    #if self.is_temporal:
-                    #    self.scaler.unscale_(self.optimizer)
-                    #    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                        
-                    self.scaler.step(self.optimizer)
-                    self.scaler.update()
-                    self.optimizer.zero_grad(set_to_none=True)
-            else:
-
-                loss.backward()
-
-                if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
-                    self.optimizer.step()
-                    self.optimizer.zero_grad()
-
+                loss = self._forward_step(x, y)["loss"]
+                #loss = self._post_forward_hook(logits, y)
+            
+            self._scale_loss(i, loss)
+            
             real_loss = loss.item() * self.accumulation_steps
             losses.append(real_loss)
             pbar.set_postfix({"loss": real_loss})
@@ -175,7 +175,7 @@ class BenchmarkEngine:
             if self.device.type == "cuda":
                 dummy = torch.randn(1, *next(iter(self.val_loader))["image"].shape[1:]).to(self.device)
                 for _ in range(5):
-                    _ = self.model(dummy)
+                    _ = self._prepare_inputs(dummy)
 
         with torch.inference_mode():
             self.dice_metric.reset()
@@ -199,8 +199,9 @@ class BenchmarkEngine:
         
                 start_batch = time.perf_counter()
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                    logits = self._forward_step(x)
-                    loss = self._post_forward_hook(logits, y)
+                    results = self._forward_step(x, y)
+                    logits = results["logits"]
+                    loss = results["loss"]
 
                 if self.device.type == "cuda":
                     torch.cuda.synchronize()
@@ -278,7 +279,7 @@ class BenchmarkEngine:
 
                     start_time = time.perf_counter()
 
-                    logits = self._forward_step(x)
+                    logits = self._forward_step(x, y)["logits"]
                     
                     main_logits = logits[0] if isinstance(logits, list) else logits
 

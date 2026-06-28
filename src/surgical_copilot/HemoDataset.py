@@ -1,7 +1,10 @@
 import random
 from pathlib import Path
+from PIL import Image
 from collections import defaultdict
 import torch
+import numpy as np
+from collections import defaultdict
 
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit
 
@@ -54,8 +57,8 @@ class HemosetDataSet:
 
             self.patient_data[patient_id].append({
                 "image": str(img_path),
-                "label": str(final_mask_path),
-                "is_first_frame": is_first  
+                "label": str(final_mask_path)
+                #"is_first_frame": is_first  
             })
 
         if not self.patient_data:
@@ -184,13 +187,125 @@ class HemosetDataSet:
             sample = self.base_transforms(sample)
 
         return sample
+    
+class HemosetEarlyFusion(HemosetDataSet):
+    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42):
+        super().__init__(root_dir, image_size, seed)
+
+        self.patient_samples = defaultdict(list)
+
+        for patient , frames in self.patient_data.items():
+
+            for i in range(len(frames)):
+
+                current = frames[i]
+
+                if i == 0:
+                    previous = None
+                else:
+                    previous = frames[i-1]
+
+                self.patient_samples[patient].append(
+                    {
+                        "current_image": current["image"],
+                        "current_label": current["label"],
+                        "prev_label": previous["label"] if previous else None,
+                        "is_first_frame": i == 0,
+                    }
+                )
+        
+        self.base_transforms = Compose([
+            CreatePreviousMaskd(keys=["prev_label"]),
+            LoadImaged(keys=["current_image", "current_label", "prev_label"], reader="PILReader"),
+            EnsureChannelFirstd(keys=["current_image", "current_label", "prev_label"]),
+            ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            
+            AsDiscreted(keys=["current_label","prev_label"], threshold=0.5),
+            Resized(keys=["current_image", "current_label", "prev_label"], spatial_size=self.image_size, mode=("bilinear", "nearest", "nearest")),
+            ToTensord(keys=["current_image", "current_label", "prev_label"], dtype=torch.float32),
+        ])
+
+    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
+        
+        patients = sorted(list(self.patient_data.keys()))
+
+        if n_splits > len(patients):
+            raise ValueError("n_splits > numero di pig")
+        
+        gkf = GroupKFold(n_splits=n_splits)
+
+        folds = list(
+                gkf.split(
+                    X=patients,
+                    y=None,
+                    groups=patients
+                )
+            )
+
+        if fold_idx >= len(folds):
+            raise ValueError(f"fold_idx deve essere < {n_splits}")
+
+        train_val_idx, test_idx = folds[fold_idx]
+
+        train_val_patients = [patients[i] for i in train_val_idx]
+
+        test_patients = [patients[i] for i in test_idx]
+
+        gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
+
+        tv_idx, val_idx = next(
+            gss.split(train_val_patients, groups=train_val_patients)
+        )
+
+        train_patients = [train_val_patients[i] for i in tv_idx]
+        val_patients = [train_val_patients[i] for i in val_idx]
+
+        print("\n[*] Fold info")
+        print(f"Train pigs: {train_patients}")
+        print(f"Val pigs:   {val_patients}")
+        print(f"Test pigs:  {test_patients}")
+
+        train_files = []
+        val_files = []
+        test_files = []
+
+        for p in train_patients:
+            train_files.extend(self.patient_samples[p])
+
+        for p in val_patients:
+            val_files.extend(self.patient_samples[p])
+
+        for p in test_patients:
+            test_files.extend(self.patient_samples[p])
+
+        print(
+            f"[*] Samples "
+            f"train={len(train_files)} "
+            f"val={len(val_files)} "
+            f"test={len(test_files)}"
+        )
+
+        train_compose = (Compose([self.base_transforms,train_transforms]) if train_transforms  else self.base_transforms)
+
+        train_ds = CacheDataset(train_files, transform=train_compose, cache_rate=cache_rate)
+        val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
+        test_ds = CacheDataset(test_files, transform=self.base_transforms, cache_rate=cache_rate)
+
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
+        val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
+        test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
+
+        return train_loader, val_loader, test_loader
+
+    def get_sample(self, patient_id=None, index=None, transform=True):
+    
+        return super().get_sample(patient_id, index, transform=transform)
 
 class HemosetDataSequences(HemosetDataSet):
-    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42, sequence_length=5, stride=1):
+    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42, sequence_length=5, overlapping=0.75):
         super().__init__(root_dir, image_size, seed)
 
         self.sequence_length = sequence_length
-        self.stride = stride
+        self.overlapping = overlapping
 
         existing_transforms = list(self.base_transforms.transforms)
         
@@ -264,22 +379,40 @@ class HemosetDataSequences(HemosetDataSet):
         return train_loader, val_loader, test_loader
 
     def _create_sliding_window(self, patients_list):
+
         sequences = []
         
         for p in patients_list:
+
+            # for each patient, get the list of frames
+            # guarantee the indipendence of the sequences between patients
             patient_frames = self.patient_data[p]
             seq_len = self.sequence_length
+
+            # sequence are contiguous and partially overlapped
+            # thanks to the stride frame in different sequences are correlated
+            stride = int(seq_len * self.overlapping) if self.overlapping > 0 else seq_len
             
             # Sliding window with stride
-            for i in range(0, len(patient_frames) - seq_len + 1, self.stride):
+            for i in range(0, len(patient_frames) - seq_len + 1, stride):
+
+                # Example of how the sliding window works:
+                # sequence_length = 5, stride = 3
+                # [0 1 2 3 4]
+                #     [2 3 4 5 6]
+                #         [4 5 6 7 8]
+
                 window = patient_frames[i : i + seq_len]
                 
                 seq_sample = {
                     "image": [frame["image"] for frame in window],
-                    "label": [frame["label"] for frame in window]
+                    "label": [frame["label"] for frame in window],
+                    "sequence_id": f"{p}_{i}",
+                    "patient_id": p,
+                    "start_idx": i
                 }
                 sequences.append(seq_sample)
-                
+
         return sequences
     
     def get_sample(self, patient_id=None, index=None, transform=True):
@@ -327,4 +460,20 @@ class UnflattenSequenced(MapTransform):
                 
                 d[key] = d[key].view(self.seq_len, C, H, W)
                 
+        return d
+    
+
+class CreatePreviousMaskd(MapTransform):
+
+    def __init__(self, keys):
+        super().__init__(keys)
+
+    def __call__(self, data):
+
+        d = dict(data)
+
+        if d["prev_label"] is None:
+            h, w = Image.open(d["image"]).size[::-1]
+            d["prev_label"] = np.zeros((h, w), dtype=np.uint8)
+
         return d
