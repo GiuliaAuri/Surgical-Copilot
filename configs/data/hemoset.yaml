@@ -2,6 +2,5 @@ root_dir: data/raw
 cache_rate: 1.0
 img_size: [640, 480]
 n_folds: 5
-temporal: False
 sequence_length: 5
 stride: 1
