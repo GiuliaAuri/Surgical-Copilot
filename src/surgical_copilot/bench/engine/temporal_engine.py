@@ -22,7 +22,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self.mask_prev = None
 
         self.temporal_metrics = {
-            "consistency": TemporalConsistencyMetric(),
+            "consistency": TemporalConsistencyMetric(device=self.device),
             "interframe": InterFrameTemporalMetric()
         }
     
@@ -42,6 +42,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
     def _prepare_inputs(self, batch):
 
         x, y = super()._prepare_inputs(batch)
+        self.last_x=x
 
         is_first = batch.get("is_first_frame", [False])[0]
 
@@ -108,8 +109,10 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         labels_flat = labels.reshape(B * T, *labels.shape[2:])
         super()._update_metrics(preds_flat, labels_flat)
 
-        self.temporal_metrics["consistency"](preds, labels)
-        self.temporal_metrics["interframe"](preds)
+    def _update_temporal_metrics(self, preds, labels):
+        if hasattr(self, 'last_x'):
+            self.temporal_metrics["consistency"](preds, labels, self.last_x)
+            self.temporal_metrics["interframe"](preds)
 
     def _train(self):
         self._reset_all()
@@ -139,3 +142,5 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         metrics["baseline"].update(temp)
         
         return metrics
+    
+

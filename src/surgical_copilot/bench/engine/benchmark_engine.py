@@ -106,6 +106,9 @@ class BenchmarkEngine:
         self.dice_metric(y_pred=preds, y=labels)
         self.hd95_metric(y_pred=preds, y=labels)
         self.iou(y_pred=preds, y=labels)
+        
+        if hasattr(self, "_update_temporal_metrics"):
+            self._update_temporal_metrics(preds, labels)
 
     def _train(self):
 
@@ -378,8 +381,8 @@ class BenchmarkEngine:
 
         model_name = self.cfg.model_key 
         
-        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        #base_dir = Path("/homes/gauri/lab/weights")
+        #base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
+        base_dir = Path("/homes/gauri/lab/results")
         weights_dir = base_dir / model_name
         weights_dir.mkdir(parents=True, exist_ok=True)
         

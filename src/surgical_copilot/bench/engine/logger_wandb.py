@@ -54,7 +54,7 @@ class WandbLogger:
             if "temporal_iou" in scores:
                 log_dict[f"Metric_Temporal_Var_IoU/Stress_{scenario}"] = scores["temporal_iou"]
                 log_dict[f"Metric_Temporal_Var_Dice/Stress_{scenario}"] = scores["temporal_dice"]
-
+                log_dict[f"Metric_Temporal_Var/TC_IoU/Stress_{scenario}"] = scores["temporal_consistency_iou"]
         wandb.log(log_dict)
 
     def log_test_metrics(self, metrics: dict):

@@ -50,7 +50,7 @@ class RecurrentSMPUNet(nn.Module):
         # Ripristino e decodifica
         features = list(features)
         features[-1] = bottleneck
-        decoder_output = self.model.decoder(*features)
+        decoder_output = self.model.decoder(features)
         logits = self.model.segmentation_head(decoder_output)
         
         return logits, current_state
