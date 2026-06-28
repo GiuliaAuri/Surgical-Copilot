@@ -10,7 +10,7 @@ def main(cfg: DictConfig):
     runner = KFoldRunner(cfg)
     results = runner.run()
 
-    df, summary = report(results)
+    #df, summary = report(results)
 
 def report(all_metrics):
     df = pd.DataFrame(all_metrics)

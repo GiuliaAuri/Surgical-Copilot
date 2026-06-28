@@ -32,11 +32,19 @@ class WandbLogger:
             "Metric_Dice/Baseline": metrics["baseline"]["dice"],
             "Metric_HD95/Baseline": metrics["baseline"]["hd95"],
             "Metric_IoU/Baseline": metrics["baseline"]["iou"],
-
-            "Metric_Temporal_Var/IoU": metrics["baseline"].get("temporal_iou", 0.0),
-            "Metric_Temporal_Var/Dice": metrics["baseline"].get("temporal_dice", 0.0),
-            "Metric_Temporal_Var/TC_IoU": metrics["baseline"].get("temporal_consistency_iou", 0.0),
         }
+
+        if "consistency" in metrics.get("baseline", {}):
+            log_dict.update({
+                "Metric_Temporal_Consistancy/IoU": metrics["baseline"]["consistency"].get("temporal_iou", 0.0),
+                "Metric_Temporal_Consistancy/Dice": metrics["baseline"]["consistency"].get("temporal_dice", 0.0),
+            })
+
+        if "interframe" in metrics.get("baseline", {}):
+            log_dict.update({
+                "Metric_Temporal_Interframe/IoU": metrics["baseline"]["interframe"].get("temporal_iou", 0.0),
+                "Metric_Temporal_Interframe/Dice": metrics["baseline"]["interframe"].get("temporal_dice", 0.0),
+            })
 
         for scenario, scores in metrics.get("stress", {}).items():
             log_dict[f"Metric_Dice/Stress_{scenario}"] = scores["dice"]
@@ -54,36 +62,53 @@ class WandbLogger:
         if not self.is_active:
             return
 
+        test_log_dict = {}
+
         columns = ["Scenario", "Dice", "HD95", "IoU", "Inference_FPS", "Drop (%)"]
         table = wandb.Table(columns=columns)
 
+        baseline = metrics.get("baseline", {})
         table.add_data(
             "baseline (clean)",
-            round(metrics["baseline"]["dice"], 4),
-            round(metrics["baseline"]["hd95"], 2),
-            round(metrics["baseline"]["iou"], 4),
-            round(metrics["baseline"].get("inference_fps", 0.0), 2),
+            round(baseline.get("dice", 0.0), 4),
+            round(baseline.get("hd95", 0.0), 2),
+            round(baseline.get("iou", 0.0), 4),
+            round(baseline.get("inference_fps", 0.0), 2),
             0.0
         )
 
         for scenario, scores in metrics.get("stress", {}).items():
             drop_val = scores.get("drop_percent", scores.get("drop", 0.0) * 100)
+            
+            test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores.get("dice", 0.0)
+            test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores.get("hd95", 0.0)
+            test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores.get("iou", 0.0)
+            test_log_dict[f"Test_Stress_Drop/{scenario}"] = scores.get("drop", drop_val / 100)
+
             table.add_data(
                 scenario,
-                round(scores["dice"], 4),
-                round(scores["hd95"], 2),
-                round(scores["iou"], 4),
+                round(scores.get("dice", 0.0), 4),
+                round(scores.get("hd95", 0.0), 2),
+                round(scores.get("iou", 0.0), 4),
                 round(scores.get("inference_fps", 0.0), 2),
                 round(drop_val, 2)
             )
 
-        wandb.log({"Test/Performance_Table": table})
+        test_log_dict["Test/Performance_Table"] = table
+        wandb.log(test_log_dict)
 
     def log_qualitative_masks(self, images: torch.Tensor, labels: torch.Tensor, preds: torch.Tensor, scenario_name: str, epoch: int, max_samples: int = 4):
         if not self.is_active:
             return
 
-        wandb_images = []
+        class_labels = {
+            0: "Tissue/Background",
+            1: "Hemorrhage"
+        }
+
+        columns = ["Epoch", "Scenario", "Sample ID", "Segmentation Overlay"]
+        qualitative_table = wandb.Table(columns=columns)
+
         n_samples = min(images.shape[0], max_samples)
 
         for i in range(n_samples):
@@ -99,24 +124,20 @@ class WandbLogger:
             gt = labels[i].detach().cpu().numpy().squeeze().astype(np.uint8)
             pr = preds[i].detach().cpu().numpy().squeeze().astype(np.uint8)
 
-            wandb_images.append(
-                wandb.Image(
-                    img,
-                    masks={
-                        "predictions": {
-                            "mask_data": pr,
-                            "class_labels": {1: "Hemorrhage"}
-                        },
-                        "ground_truth": {
-                            "mask_data": gt,
-                            "class_labels": {1: "Hemorrhage"}
-                        }
+            wandb_img = wandb.Image(
+                img,
+                masks={
+                    "predictions": {
+                        "mask_data": pr,
+                        "class_labels": class_labels
                     },
-                    caption=f"Eval Sample {i}"
-                )
+                    "ground_truth": {
+                        "mask_data": gt,
+                        "class_labels": class_labels
+                    }
+                }
             )
 
-        wandb.log({
-            f"Qualitative_Results/{scenario_name}": wandb_images,
-            "epoch": epoch
-        })
+            qualitative_table.add_data(epoch, scenario_name, f"Frame_{i}", wandb_img)
+
+        wandb.log({f"Qualitative_Analysis/{scenario_name}": qualitative_table})

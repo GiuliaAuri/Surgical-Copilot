@@ -1,0 +1,184 @@
+2026-06-02 17:37:59,253 INFO    StreamThr :2302051 [internal.py:wandb_internal():86] W&B internal server running at pid: 2302051, started at: 2026-06-02 17:37:59.252995
+2026-06-02 17:37:59,255 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: status
+2026-06-02 17:37:59,261 INFO    WriterThread:2302051 [datastore.py:open_for_write():87] open: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/run-t4bt89l6.wandb
+2026-06-02 17:37:59,262 DEBUG   SenderThread:2302051 [sender.py:send():379] send: header
+2026-06-02 17:37:59,286 DEBUG   SenderThread:2302051 [sender.py:send():379] send: run
+2026-06-02 17:37:59,993 INFO    SenderThread:2302051 [dir_watcher.py:__init__():211] watching files in: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files
+2026-06-02 17:37:59,993 INFO    SenderThread:2302051 [sender.py:_start_run_threads():1124] run started: t4bt89l6 with start time 1780414679.256306
+2026-06-02 17:38:00,007 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: check_version
+2026-06-02 17:38:00,007 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: check_version
+2026-06-02 17:38:00,150 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: run_start
+2026-06-02 17:38:00,186 DEBUG   HandlerThread:2302051 [system_info.py:__init__():26] System info init
+2026-06-02 17:38:00,186 DEBUG   HandlerThread:2302051 [system_info.py:__init__():41] System info init done
+2026-06-02 17:38:00,186 INFO    HandlerThread:2302051 [system_monitor.py:start():194] Starting system monitor
+2026-06-02 17:38:00,187 INFO    SystemMonitor:2302051 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2026-06-02 17:38:00,187 INFO    HandlerThread:2302051 [system_monitor.py:probe():214] Collecting system info
+2026-06-02 17:38:00,188 INFO    SystemMonitor:2302051 [interfaces.py:start():190] Started cpu monitoring
+2026-06-02 17:38:00,189 INFO    SystemMonitor:2302051 [interfaces.py:start():190] Started disk monitoring
+2026-06-02 17:38:00,190 INFO    SystemMonitor:2302051 [interfaces.py:start():190] Started gpu monitoring
+2026-06-02 17:38:00,191 INFO    SystemMonitor:2302051 [interfaces.py:start():190] Started memory monitoring
+2026-06-02 17:38:00,191 INFO    SystemMonitor:2302051 [interfaces.py:start():190] Started network monitoring
+2026-06-02 17:38:00,233 DEBUG   HandlerThread:2302051 [system_info.py:probe():150] Probing system
+2026-06-02 17:38:00,235 DEBUG   HandlerThread:2302051 [system_info.py:_probe_git():135] Probing git
+2026-06-02 17:38:00,255 DEBUG   HandlerThread:2302051 [system_info.py:_probe_git():143] Probing git done
+2026-06-02 17:38:00,255 DEBUG   HandlerThread:2302051 [system_info.py:probe():198] Probing system done
+2026-06-02 17:38:00,256 DEBUG   HandlerThread:2302051 [system_monitor.py:probe():223] {'os': 'Linux-5.15.0-174-generic-x86_64-with-glibc2.35', 'python': '3.11.5', 'heartbeatAt': '2026-06-02T15:38:00.233331', 'startedAt': '2026-06-02T15:37:59.241860', 'docker': None, 'cuda': None, 'args': ('model_key=r_unet',), 'state': 'running', 'program': '/homes/cmininno/cvcs2026/Surgical-Copilot/src/surgical_copilot/bench/benchmarking.py', 'codePathLocal': 'src/surgical_copilot/bench/benchmarking.py', 'codePath': 'src/surgical_copilot/bench/benchmarking.py', 'git': {'remote': 'https://github.com/minicla03/Surgical-Copilot', 'commit': '58313deba8affd7f6002fe54ba73caeadb0d6a5e'}, 'email': 'mininnoclaudio@gmail.com', 'root': '/homes/cmininno/cvcs2026/Surgical-Copilot', 'host': 'gervasoni', 'username': 'cmininno', 'executable': '/homes/cmininno/cvcs2026/venv/bin/python', 'cpu_count': 32, 'cpu_count_logical': 64, 'cpu_freq': {'current': 1583.979375, 'min': 1200.0, 'max': 3900.0}, 'cpu_freq_per_core': [{'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 3900.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 2899.998, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 3900.0, 'min': 1200.0, 'max': 3900.0}, {'current': 2400.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 3900.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 3900.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 2351.395, 'min': 1200.0, 'max': 3900.0}, {'current': 3000.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 3900.0, 'min': 1200.0, 'max': 3900.0}, {'current': 2500.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 3900.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}, {'current': 1200.0, 'min': 1200.0, 'max': 3900.0}], 'disk': {'/': {'total': 195.8027114868164, 'used': 68.43841934204102}}, 'gpu': 'Quadro RTX 5000', 'gpu_count': 1, 'gpu_devices': [{'name': 'Quadro RTX 5000', 'memory_total': 17179869184}], 'memory': {'total': 376.5531005859375}}
+2026-06-02 17:38:00,256 INFO    HandlerThread:2302051 [system_monitor.py:probe():224] Finished collecting system info
+2026-06-02 17:38:00,256 INFO    HandlerThread:2302051 [system_monitor.py:probe():227] Publishing system info
+2026-06-02 17:38:00,258 INFO    HandlerThread:2302051 [system_monitor.py:probe():229] Finished publishing system info
+2026-06-02 17:38:00,265 DEBUG   SenderThread:2302051 [sender.py:send():379] send: files
+2026-06-02 17:38:00,265 INFO    SenderThread:2302051 [sender.py:_save_file():1390] saving file wandb-metadata.json with policy now
+2026-06-02 17:38:00,840 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: python_packages
+2026-06-02 17:38:00,840 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: python_packages
+2026-06-02 17:38:00,841 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: internal_messages
+2026-06-02 17:38:00,843 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: stop_status
+2026-06-02 17:38:00,843 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: stop_status
+2026-06-02 17:38:00,994 INFO    Thread-12 :2302051 [dir_watcher.py:_on_file_created():271] file/dir created: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/wandb-metadata.json
+2026-06-02 17:38:00,994 INFO    Thread-12 :2302051 [dir_watcher.py:_on_file_created():271] file/dir created: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/requirements.txt
+2026-06-02 17:38:01,118 INFO    wandb-upload_0:2302051 [upload_job.py:push():131] Uploaded file /tmp/tmpd5307_0pwandb/euv03b1y-wandb-metadata.json
+2026-06-02 17:38:01,163 DEBUG   SenderThread:2302051 [sender.py:send():379] send: telemetry
+2026-06-02 17:38:01,859 DEBUG   SenderThread:2302051 [sender.py:send():379] send: exit
+2026-06-02 17:38:01,859 INFO    SenderThread:2302051 [sender.py:send_exit():586] handling exit code: 1
+2026-06-02 17:38:01,859 INFO    SenderThread:2302051 [sender.py:send_exit():588] handling runtime: 1
+2026-06-02 17:38:01,860 INFO    SenderThread:2302051 [sender.py:_save_file():1390] saving file wandb-summary.json with policy end
+2026-06-02 17:38:01,860 INFO    SenderThread:2302051 [sender.py:send_exit():594] send defer
+2026-06-02 17:38:01,860 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:01,860 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 0
+2026-06-02 17:38:01,860 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:01,860 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 0
+2026-06-02 17:38:01,860 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 1
+2026-06-02 17:38:01,860 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:01,860 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 1
+2026-06-02 17:38:01,860 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:01,860 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 1
+2026-06-02 17:38:01,860 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 2
+2026-06-02 17:38:01,861 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:01,861 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 2
+2026-06-02 17:38:01,861 INFO    HandlerThread:2302051 [system_monitor.py:finish():203] Stopping system monitor
+2026-06-02 17:38:01,861 DEBUG   SystemMonitor:2302051 [system_monitor.py:_start():172] Starting system metrics aggregation loop
+2026-06-02 17:38:01,861 DEBUG   SystemMonitor:2302051 [system_monitor.py:_start():179] Finished system metrics aggregation loop
+2026-06-02 17:38:01,861 DEBUG   SystemMonitor:2302051 [system_monitor.py:_start():183] Publishing last batch of metrics
+2026-06-02 17:38:01,861 INFO    HandlerThread:2302051 [interfaces.py:finish():202] Joined cpu monitor
+2026-06-02 17:38:01,861 INFO    HandlerThread:2302051 [interfaces.py:finish():202] Joined disk monitor
+2026-06-02 17:38:01,929 INFO    HandlerThread:2302051 [interfaces.py:finish():202] Joined gpu monitor
+2026-06-02 17:38:01,930 INFO    HandlerThread:2302051 [interfaces.py:finish():202] Joined memory monitor
+2026-06-02 17:38:01,930 INFO    HandlerThread:2302051 [interfaces.py:finish():202] Joined network monitor
+2026-06-02 17:38:01,930 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:01,930 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 2
+2026-06-02 17:38:01,930 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 3
+2026-06-02 17:38:01,930 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:01,930 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 3
+2026-06-02 17:38:01,930 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:01,930 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 3
+2026-06-02 17:38:01,930 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 4
+2026-06-02 17:38:01,930 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:01,930 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 4
+2026-06-02 17:38:01,931 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:01,931 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 4
+2026-06-02 17:38:01,931 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 5
+2026-06-02 17:38:01,931 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:01,931 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 5
+2026-06-02 17:38:01,931 DEBUG   SenderThread:2302051 [sender.py:send():379] send: summary
+2026-06-02 17:38:01,932 INFO    SenderThread:2302051 [sender.py:_save_file():1390] saving file wandb-summary.json with policy end
+2026-06-02 17:38:01,932 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:01,932 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 5
+2026-06-02 17:38:01,932 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 6
+2026-06-02 17:38:01,932 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:01,932 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 6
+2026-06-02 17:38:01,932 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:01,933 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 6
+2026-06-02 17:38:01,935 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: status_report
+2026-06-02 17:38:01,995 INFO    Thread-12 :2302051 [dir_watcher.py:_on_file_created():271] file/dir created: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/wandb-summary.json
+2026-06-02 17:38:01,995 INFO    Thread-12 :2302051 [dir_watcher.py:_on_file_created():271] file/dir created: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/output.log
+2026-06-02 17:38:02,326 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 7
+2026-06-02 17:38:02,327 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:02,327 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 7
+2026-06-02 17:38:02,327 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:02,327 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 7
+2026-06-02 17:38:02,859 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: poll_exit
+2026-06-02 17:38:02,996 INFO    Thread-12 :2302051 [dir_watcher.py:_on_file_modified():288] file/dir modified: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/config.yaml
+2026-06-02 17:38:03,236 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 8
+2026-06-02 17:38:03,236 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: poll_exit
+2026-06-02 17:38:03,236 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:03,237 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 8
+2026-06-02 17:38:03,237 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:03,237 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 8
+2026-06-02 17:38:03,237 INFO    SenderThread:2302051 [job_builder.py:build():318] Attempting to build job artifact
+2026-06-02 17:38:03,239 INFO    SenderThread:2302051 [job_builder.py:_get_source_type():455] is repo sourced job
+2026-06-02 17:38:03,267 INFO    SenderThread:2302051 [job_builder.py:build():431] adding wandb-job metadata file
+2026-06-02 17:38:03,276 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 9
+2026-06-02 17:38:03,277 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:03,277 DEBUG   SenderThread:2302051 [sender.py:send():379] send: artifact
+2026-06-02 17:38:03,277 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 9
+2026-06-02 17:38:03,860 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: poll_exit
+2026-06-02 17:38:03,996 INFO    Thread-12 :2302051 [dir_watcher.py:_on_file_modified():288] file/dir modified: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/output.log
+2026-06-02 17:38:04,735 INFO    wandb-upload_0:2302051 [upload_job.py:push():86] Skipped uploading /homes/cmininno/.local/share/wandb/artifacts/staging/tmps0mbxw_8
+2026-06-02 17:38:05,595 INFO    wandb-upload_1:2302051 [upload_job.py:push():89] Uploaded file /tmp/tmpcfjkhvuo/wandb-job.json
+2026-06-02 17:38:07,131 INFO    SenderThread:2302051 [sender.py:send_artifact():1468] sent artifact job-https___github.com_minicla03_Surgical-Copilot_src_surgical_copilot_bench_benchmarking.py - {'id': 'QXJ0aWZhY3Q6MjkyNDM5MjI2NQ==', 'state': 'PENDING', 'artifactSequence': {'id': 'QXJ0aWZhY3RDb2xsZWN0aW9uOjEwMzM1NjY5MjI=', 'latestArtifact': {'id': 'QXJ0aWZhY3Q6Mjg4MjU5Nzg4Nw==', 'versionIndex': 11}}}
+2026-06-02 17:38:07,131 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:07,131 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 9
+2026-06-02 17:38:07,131 INFO    SenderThread:2302051 [dir_watcher.py:finish():358] shutting down directory watcher
+2026-06-02 17:38:07,131 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: status_report
+2026-06-02 17:38:07,998 INFO    SenderThread:2302051 [dir_watcher.py:finish():388] scan: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files
+2026-06-02 17:38:07,999 INFO    SenderThread:2302051 [dir_watcher.py:finish():402] scan save: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/config.yaml config.yaml
+2026-06-02 17:38:07,999 INFO    SenderThread:2302051 [dir_watcher.py:finish():402] scan save: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/wandb-metadata.json wandb-metadata.json
+2026-06-02 17:38:07,999 INFO    SenderThread:2302051 [dir_watcher.py:finish():402] scan save: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/requirements.txt requirements.txt
+2026-06-02 17:38:08,000 INFO    SenderThread:2302051 [dir_watcher.py:finish():402] scan save: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/output.log output.log
+2026-06-02 17:38:08,005 INFO    SenderThread:2302051 [dir_watcher.py:finish():402] scan save: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/wandb-summary.json wandb-summary.json
+2026-06-02 17:38:08,008 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 10
+2026-06-02 17:38:08,008 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: poll_exit
+2026-06-02 17:38:08,009 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:08,012 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 10
+2026-06-02 17:38:08,012 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:08,012 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 10
+2026-06-02 17:38:08,012 INFO    SenderThread:2302051 [file_pusher.py:finish():172] shutting down file pusher
+2026-06-02 17:38:08,442 INFO    wandb-upload_0:2302051 [upload_job.py:push():131] Uploaded file /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/config.yaml
+2026-06-02 17:38:08,672 INFO    wandb-upload_1:2302051 [upload_job.py:push():131] Uploaded file /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/requirements.txt
+2026-06-02 17:38:08,714 INFO    wandb-upload_3:2302051 [upload_job.py:push():131] Uploaded file /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/wandb-summary.json
+2026-06-02 17:38:08,741 INFO    wandb-upload_2:2302051 [upload_job.py:push():131] Uploaded file /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/files/output.log
+2026-06-02 17:38:08,862 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: keepalive
+2026-06-02 17:38:08,863 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: poll_exit
+2026-06-02 17:38:08,863 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: poll_exit
+2026-06-02 17:38:08,941 INFO    Thread-11 (_thread_body):2302051 [sender.py:transition_state():614] send defer: 11
+2026-06-02 17:38:08,942 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:08,942 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 11
+2026-06-02 17:38:08,942 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:08,942 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 11
+2026-06-02 17:38:08,943 INFO    SenderThread:2302051 [file_pusher.py:join():178] waiting for file pusher
+2026-06-02 17:38:08,943 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 12
+2026-06-02 17:38:08,943 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:08,943 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 12
+2026-06-02 17:38:08,943 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:08,943 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 12
+2026-06-02 17:38:08,943 INFO    SenderThread:2302051 [file_stream.py:finish():614] file stream finish called
+2026-06-02 17:38:09,183 INFO    SenderThread:2302051 [file_stream.py:finish():618] file stream finish is done
+2026-06-02 17:38:09,184 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 13
+2026-06-02 17:38:09,184 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:09,184 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 13
+2026-06-02 17:38:09,184 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:09,184 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 13
+2026-06-02 17:38:09,185 INFO    SenderThread:2302051 [sender.py:transition_state():614] send defer: 14
+2026-06-02 17:38:09,185 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: defer
+2026-06-02 17:38:09,185 INFO    HandlerThread:2302051 [handler.py:handle_request_defer():172] handle defer: 14
+2026-06-02 17:38:09,185 DEBUG   SenderThread:2302051 [sender.py:send():379] send: final
+2026-06-02 17:38:09,185 DEBUG   SenderThread:2302051 [sender.py:send():379] send: footer
+2026-06-02 17:38:09,185 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: defer
+2026-06-02 17:38:09,186 INFO    SenderThread:2302051 [sender.py:send_request_defer():610] handle sender defer: 14
+2026-06-02 17:38:09,186 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: poll_exit
+2026-06-02 17:38:09,187 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: poll_exit
+2026-06-02 17:38:09,187 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: poll_exit
+2026-06-02 17:38:09,187 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: poll_exit
+2026-06-02 17:38:09,188 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: server_info
+2026-06-02 17:38:09,188 DEBUG   SenderThread:2302051 [sender.py:send_request():406] send_request: server_info
+2026-06-02 17:38:09,192 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: get_summary
+2026-06-02 17:38:09,192 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: sampled_history
+2026-06-02 17:38:09,192 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: internal_messages
+2026-06-02 17:38:09,338 INFO    MainThread:2302051 [wandb_run.py:_footer_history_summary_info():3936] rendering history
+2026-06-02 17:38:09,338 INFO    MainThread:2302051 [wandb_run.py:_footer_history_summary_info():3968] rendering summary
+2026-06-02 17:38:09,338 INFO    MainThread:2302051 [wandb_run.py:_footer_sync_info():3895] logging synced files
+2026-06-02 17:38:09,339 DEBUG   HandlerThread:2302051 [handler.py:handle_request():146] handle_request: shutdown
+2026-06-02 17:38:09,339 INFO    HandlerThread:2302051 [handler.py:finish():866] shutting down handler
+2026-06-02 17:38:10,188 INFO    WriterThread:2302051 [datastore.py:close():296] close: /homes/cmininno/cvcs2026/Surgical-Copilot/wandb/run-20260602_173759-t4bt89l6/run-t4bt89l6.wandb
+2026-06-02 17:38:10,338 INFO    SenderThread:2302051 [sender.py:finish():1546] shutting down sender
+2026-06-02 17:38:10,338 INFO    SenderThread:2302051 [file_pusher.py:finish():172] shutting down file pusher
+2026-06-02 17:38:10,338 INFO    SenderThread:2302051 [file_pusher.py:join():178] waiting for file pusher

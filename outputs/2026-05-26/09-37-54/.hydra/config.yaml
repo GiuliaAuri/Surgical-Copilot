@@ -1,0 +1,94 @@
+model:
+  unet:
+    _target_: monai.networks.nets.UNet
+    spatial_dims: 2
+    in_channels: 3
+    out_channels: 1
+    channels:
+    - 32
+    - 64
+    - 128
+    - 256
+    - 512
+    strides:
+    - 2
+    - 2
+    - 2
+    - 2
+    num_res_units: 2
+  unet_plus_plus:
+    _target_: monai.networks.nets.BasicUNetPlusPlus
+    spatial_dims: 2
+    in_channels: 3
+    out_channels: 1
+    features:
+    - 32
+    - 64
+    - 128
+    - 256
+    - 512
+    - 32
+    deep_supervision: false
+  swin_unet:
+    _target_: surgical_copilot.models.vision_trasformer_swin.swin_unet.SwinUnet
+    img_size:
+    - 640
+    - 480
+    in_chans: 3
+    num_classes: 1
+    window_size: 8
+  swin_unetr:
+    _target_: monai.networks.nets.SwinUNETR
+    img_size:
+    - 640
+    - 480
+    in_channels: 3
+    out_channels: 1
+    feature_size: 48
+    spatial_dims: 2
+    use_checkpoint: true
+  yolo_v8_seg:
+    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
+    num_classes: 1
+    num_masks: 32
+data:
+  root_dir: data/raw
+  cache_rate: 1.0
+  img_size:
+  - 640
+  - 480
+  n_folds: 5
+trainer:
+  trainer:
+    max_epochs: 50
+    accumulation_steps: 3
+    eval_freq: 5
+    save_checkpoint: true
+    num_workers: 4
+    batch_size: 4
+    precision: 16-mixed
+  optimizer:
+    _target_: torch.optim.AdamW
+    lr: 0.001
+    weight_decay: 1.0e-05
+  scaler:
+    _target_: torch.cuda.amp.GradScaler
+    enabled: true
+  loss:
+    _target_: monai.losses.DiceFocalLoss
+    sigmoid: true
+    gamma: 1.0
+    lambda_dice: 0.5
+    lambda_focal: 0.5
+  early_stopping:
+    patience: 5
+    monitor: val_dice
+    mode: max
+model_key: unet
+seed: 42
+device: cuda
+debug: false
+logging:
+  project: surgical-copilot
+  wandb_enabled: true
+  exp_tag: focal_warmup_26052026

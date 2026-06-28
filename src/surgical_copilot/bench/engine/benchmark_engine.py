@@ -5,8 +5,12 @@ import wandb
 from tqdm import tqdm
 from pathlib import Path
 
-from monai.metrics import DiceMetric, HausdorffDistanceMetric, MeanIoU
-from monai.transforms import Activations, AsDiscrete, Compose
+from monai.metrics.meandice import DiceMetric
+from monai.metrics.hausdorff_distance import HausdorffDistanceMetric
+from monai.metrics.meaniou import MeanIoU
+from monai.transforms.post.array import Activations, AsDiscrete
+from monai.transforms.compose import Compose
+from monai.transforms.post.array import KeepLargestConnectedComponent
 
 from surgical_copilot.bench.perturbation import PerturbationPipelines
 from surgical_copilot.bench.engine.logger_wandb import WandbLogger
@@ -44,13 +48,16 @@ class BenchmarkEngine:
         self.device = device
         self.fold_idx = fold_idx
 
+        self.accumulation_steps = self.cfg.trainer.trainer.get("accumulation_steps", 4)
+
         self.dice_metric = DiceMetric(reduction="mean")
         self.hd95_metric = HausdorffDistanceMetric(percentile=95)
         self.iou = MeanIoU(reduction="mean")
 
         self.post_pred = Compose([
             Activations(sigmoid=True),
-            AsDiscrete(threshold=0.5)
+            AsDiscrete(threshold=0.5),
+            KeepLargestConnectedComponent(applied_labels=None) ## !!!!
         ])
         self.post_label = Compose([
             AsDiscrete(threshold=0.5)
@@ -72,10 +79,28 @@ class BenchmarkEngine:
         return x, y
 
     def _forward_step(self, x):
-        return self.model(x)
+        logits = self.model(x)
+        return logits
 
-    def _post_forward_hook(self, logits):
-        pass
+    def _post_forward_hook(self, logits, y):
+        
+        # Gestione Deep Supervision
+        logits = logits[0] if isinstance(logits, list) else logits
+
+        # manage the Deep Supervision configuration
+        if isinstance(logits, list):
+            loss = sum(self.loss_fn(l, y) for l in logits) / len(logits)
+        else:
+            loss = self.loss_fn(logits, y)
+
+        return loss / self.accumulation_steps
+
+    def _post_processing(self, logits, y):
+        # Vectorized Post-processing on batch
+        preds = self.post_pred(logits)
+        labels = self.post_label(y)
+
+        return preds, labels
 
     def _update_metrics(self, preds, labels):
         self.dice_metric(y_pred=preds, y=labels)
@@ -87,7 +112,6 @@ class BenchmarkEngine:
         self.model.train()
         losses = []
 
-        accumulation_steps = self.cfg.trainer.trainer.get("accumulation_steps", 4)
         self.optimizer.zero_grad()
 
         pbar = tqdm(self.train_loader, desc="Training")
@@ -97,32 +121,19 @@ class BenchmarkEngine:
             x, y = self._prepare_inputs(batch)
 
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                
                 logits = self._forward_step(x)
+                loss = self._post_forward_hook(logits, y)
                 
-                # Gestione Deep Supervision
-                main_logits = logits[0] if isinstance(logits, list) else logits
-
-                self._post_forward_hook(main_logits)
-
-                # manage the Deep Supervision configuration
-                if isinstance(logits, list):
-                    loss = sum(self.loss_fn(l, y) for l in logits) / len(logits)
-                else:
-                    loss = self.loss_fn(logits, y)
-
-                loss = loss / accumulation_steps
-
             if self.scaler is not None:
 
                 self.scaler.scale(loss).backward()
 
-                if ((i + 1) % accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
+                if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
 
                     # Apply clipping ONLY for temporal models
-                    if self.is_temporal:
-                        self.scaler.unscale_(self.optimizer)
-                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    #if self.is_temporal:
+                    #    self.scaler.unscale_(self.optimizer)
+                    #    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                         
                     self.scaler.step(self.optimizer)
                     self.scaler.update()
@@ -131,11 +142,11 @@ class BenchmarkEngine:
 
                 loss.backward()
 
-                if ((i + 1) % accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
+                if ((i + 1) % self.accumulation_steps == 0) or (i + 1 == len(self.train_loader)):
                     self.optimizer.step()
                     self.optimizer.zero_grad()
 
-            real_loss = loss.item() * accumulation_steps
+            real_loss = loss.item() * self.accumulation_steps
             losses.append(real_loss)
             pbar.set_postfix({"loss": real_loss})
 
@@ -144,7 +155,7 @@ class BenchmarkEngine:
 
     def _validate(self, epoch: int) -> dict:
 
-        print("\n[*] Evaluation & Stress Test")
+        print("\n[*] Evaluation")
         self.model.eval()
         clean_pipeline  = PerturbationPipelines.get_eval_scenarios()["clean"]
 
@@ -186,10 +197,7 @@ class BenchmarkEngine:
                 start_batch = time.perf_counter()
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                     logits = self._forward_step(x)
-                
-                main_logits = logits[0] if isinstance(logits, list) else logits
-
-                self._post_forward_hook(main_logits)
+                    loss = self._post_forward_hook(logits, y)
 
                 if self.device.type == "cuda":
                     torch.cuda.synchronize()
@@ -198,17 +206,9 @@ class BenchmarkEngine:
 
                 # compute FPS 
                 total_model_time += batch_time
+                val_losses.append(loss.item() * self.accumulation_steps)
                     
-                #  Deep Supervision
-                main_logits = logits[0] if isinstance(logits, list) else logits
-
-                loss = self.loss_fn(main_logits, y)
-                val_losses.append(loss.item())
-
-                # Vectorized Post-processing on batch
-                preds = self.post_pred(main_logits)
-                labels = self.post_label(y)
-                
+                preds, labels = self._post_processing(logits, y)
                 self._update_metrics(preds, labels)
 
                 # Log visual results 
@@ -217,7 +217,7 @@ class BenchmarkEngine:
                     epochs_total = self.cfg.trainer.trainer.max_epochs
                     is_last_epoch = (epoch == epochs_total - 1)
                     
-                    if epoch == 0 or (epoch + 1) % 5 == 0 or is_last_epoch:
+                    if epoch == 0 or (epoch + 1) % 10 == 0 or is_last_epoch:
                         if wandb.run is not None:
                             self.logger.log_qualitative_masks(x, y, preds, "clean", epoch)
                                                     
@@ -255,6 +255,8 @@ class BenchmarkEngine:
                 self.hd95_metric.reset()
                 self.iou.reset()
 
+                logged_visuals = False
+
                 total_model_time = 0.0
                 total_images = 0
 
@@ -274,6 +276,8 @@ class BenchmarkEngine:
                     start_time = time.perf_counter()
 
                     logits = self._forward_step(x)
+                    
+                    main_logits = logits[0] if isinstance(logits, list) else logits
 
                     if self.device.type == "cuda":
                         torch.cuda.synchronize()
@@ -281,16 +285,9 @@ class BenchmarkEngine:
                     batch_time = time.perf_counter() - start_time
                     total_model_time += batch_time
                     total_images += x.shape[0]
-
-                    # deep supervision handling
-                    main_logits = logits[0] if isinstance(logits, list) else logits
-
-                    self._post_forward_hook(main_logits)
                     
                     # Post-processing e metriche
-                    preds = self.post_pred(main_logits)
-                    labels = self.post_label(y)
-
+                    preds, labels = self._post_processing(main_logits, y)
                     self._update_metrics(preds, labels)
 
                     if not logged_visuals:
@@ -301,13 +298,15 @@ class BenchmarkEngine:
                             scenario_name=scenario_name, 
                             epoch=test_epoch
                         )
+
                         logged_visuals = True
 
                     scores = {
                         "dice": self.dice_metric.aggregate().item(),
                         "hd95": self.hd95_metric.aggregate().item(),
                         "iou": self.iou.aggregate().item(),
-                        "inference_fps": total_images / max(total_model_time, 1e-8)}
+                        "inference_fps": total_images / max(total_model_time, 1e-8)
+                    }
                     
                     if scenario_name == "clean":
                         metrics["baseline"] = scores
@@ -315,6 +314,7 @@ class BenchmarkEngine:
                     else:
                         clean_dice = metrics["baseline"].get("dice", 1e-8)
                         robustness_drop = (clean_dice - scores["dice"]) / (clean_dice + 1e-8)
+
                         scores["drop"] = robustness_drop
                         metrics["stress"][scenario_name] = scores
                         scores["drop_percent"] = robustness_drop * 100
@@ -354,13 +354,13 @@ class BenchmarkEngine:
             print(f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             print(f"Clean Dice: {clean_dice:.4f} | FPS: {fps:.2f}")
 
+            current_lr = self.optimizer.param_groups[0]["lr"]
+            self.logger.log_epoch_metrics(epoch, train_loss, current_lr, metrics)
+
             if clean_dice > best_fold_metrics["dice"]:
                 best_fold_metrics = metrics["baseline"]
                 best_path = self._save_checkpoint(self.fold_idx)
     
-            current_lr = self.optimizer.param_groups[0]["lr"]
-            self.logger.log_epoch_metrics(epoch, train_loss, current_lr, metrics)
-
         if best_path is None:
             raise RuntimeError("Training finish without any valid checkpoint.")
 
@@ -372,14 +372,14 @@ class BenchmarkEngine:
         print("\n=== TEST RESULTS ON BEST MODEL ===")
         print(f"Baseline | Dice: {test_metrics['baseline']['dice']:.4f} | HD95: {test_metrics['baseline']['hd95']:.4f} | IoU: {test_metrics['baseline']['iou']:.4f}")
 
-        return best_fold_metrics
+        return test_metrics
 
     def _save_checkpoint(self, fold_idx: int) -> str:
 
         model_name = self.cfg.model_key 
         
-        #base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        base_dir = Path("/homes/gauri/lab/weights")
+        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
+        #base_dir = Path("/homes/gauri/lab/weights")
         weights_dir = base_dir / model_name
         weights_dir.mkdir(parents=True, exist_ok=True)
         

@@ -1,0 +1,8 @@
+
+===== Epoch 1/50 =====
+Training:   0%|          | 0/111 [00:00<?, ?it/s]/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/torch/_tensor.py:1418: UserWarning: Applied workaround for CuDNN issue, install nvrtc.so (Triggered internally at ../aten/src/ATen/native/cudnn/Conv_v8.cpp:80.)
+  ret = func(*args, **kwargs)
+
+
+
+

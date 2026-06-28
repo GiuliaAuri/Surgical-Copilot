@@ -8,6 +8,10 @@ from monai.transforms import (
     RandAdjustContrastd,
     RandShiftIntensityd,
     Compose,
+    RandRotated,
+    RandFlipd,
+    Rand2DElasticd,
+    Rand2DElasticd,
     MapTransform
 )
 
@@ -124,11 +128,19 @@ class PerturbationPipelines:
                 keys=['image', 'label'],
                 label_key='label',
                 spatial_size=(320, 320),
-                pos=1, # Peso per patch con target
-                neg=1, # Peso per patch di solo background
-                num_samples=1
+                pos=2, # weight per patch with target (emorragic region)
+                neg=1, # weight per patch without target (background)
+                num_samples=2
             ),
-            RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)) 
+            RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)),
+
+            # Geometry trasformation
+            RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
+            RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
+            RandRotated(keys=["image", "label"], prob=0.3, range_x=0.4, mode=("bilinear", "nearest")),
+
+            # Appearance transformation
+            Rand2DElasticd(keys=["image", "label"], prob=0.2, spacing=(20, 20), magnitude_range=(1, 2), mode=("bilinear", "nearest")),
         ])
 
     @staticmethod
