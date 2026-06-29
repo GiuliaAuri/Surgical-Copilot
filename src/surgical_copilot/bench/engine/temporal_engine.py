@@ -119,13 +119,20 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
         assert x.ndim == 5, "Expected input x to be a 5D tensor of shape (B, T, C, H, W)"
 
+    def _forward_step(self, x, y=None):
+        if y is None: 
+            y = self.current_y
+    
         B, T, C, H, W = x.shape
         total_loss = 0.0
         all_logits = []
 
         for t in range(T):
-            x_t = x[:, t] # (B, C, H, W)
-            y_t = y[:, t] # (B, 1, H, W)
+            x_t = x[:, t] 
+            y_t = y[:, t]
+
+            # Inizializza logits_t per sicurezza
+            logits_t = None
 
             logits_t, self.recurrent_state = self.model(x_t, self.recurrent_state)
 

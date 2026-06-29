@@ -12,7 +12,8 @@ from monai.transforms import (
     RandFlipd,
     Rand2DElasticd,
     Rand2DElasticd,
-    MapTransform
+    MapTransform,
+    Lambda
 )
 
 
@@ -133,7 +134,7 @@ class PerturbationPipelines:
                 num_samples=2
             ),
             RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)),
-
+#
             # Geometry trasformation
             RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
             RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),

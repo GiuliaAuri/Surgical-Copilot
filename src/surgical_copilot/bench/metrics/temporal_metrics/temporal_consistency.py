@@ -70,10 +70,10 @@ class TemporalConsistencyMetric:
             self.ious.extend(iou.cpu().tolist())
             self.dices.extend(dice.cpu().tolist())
 
-        # Update degli stati per t-1
-        self.prev_pred = p_bin.clone().detach()
-        self.prev_label = l_bin.clone().detach()
-        self.prev_image = images.clone().detach()
+            # Update degli stati per t-1
+            self.prev_pred = p_bin.clone().detach()
+            self.prev_label = l_bin.clone().detach()
+            self.prev_image = images.clone().detach()
 
     def aggregate(self):
         return {

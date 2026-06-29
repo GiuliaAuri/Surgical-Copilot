@@ -17,7 +17,7 @@ from monai.transforms import (
     Resized,
     AsDiscreted,
     ToTensord,
-    NormalizeIntensityd,
+    NormalizeIntensityd
 )
 
 class HemosetDataSet:
@@ -66,11 +66,15 @@ class HemosetDataSet:
 
         print(f"[*] Dataset caricato: trovati {len(self.patient_data)} subjects (pigN) distinti.")
         print(f"[*] Totale frame validi: {sum(len(frames) for frames in self.patient_data.values())}")
-
+        
         transforms_list = [
             LoadImaged(keys=["image", "label"], reader="PILReader"),
-            EnsureChannelFirstd(keys=["image", "label"]),
+            
+            EnsureChannelFirstd(keys=["image"]),
+            EnsureChannelFirstd(keys=["label"]),
+            
             ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
+            AsDiscreted(keys=["label"], threshold=0.5),
         ]
 
         if use_imagenet_norm:
@@ -83,9 +87,8 @@ class HemosetDataSet:
                     channel_wise=True
                 )
             )
-
-        transforms_list.extend([
-            AsDiscreted(keys=["label"], threshold=0.5),
+               
+        transforms_list.extend([    
             Resized(keys=["image", "label"], spatial_size=self.image_size, mode=("bilinear", "nearest")),
             ToTensord(keys=["image", "label"], dtype=torch.float32),
         ])
@@ -213,6 +216,32 @@ class HemosetEarlyFusion(HemosetDataSet):
                         "is_first_frame": i == 0,
                     }
                 )
+                
+        # self.base_transforms = Compose([
+        #     CreatePreviousMaskd(keys=["prev_label"]),
+    # 
+        #     # Debug: Print per vedere cosa succede DOPO LoadImaged
+        #     LoadImaged(keys=["current_image", "current_label"], reader="PILReader"),
+        #     
+        #     # Usiamo 'allow_missing_keys=True' e 'channel_dim' espliciti per evitare crash
+        #     EnsureChannelFirstd(
+        #         keys=["current_image", "current_label"], 
+        #         allow_missing_keys=False
+        #     ),
+        #     
+        #     # Gestione specifica per prev_label
+        #     EnsureChannelFirstd(
+        #         keys=["prev_label"], 
+        #         channel_dim="no_channel" 
+        #     ),
+        #     
+        #     # 4. Successivamente applichi le operazioni matematiche
+        #     ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            
+        #     AsDiscreted(keys=["current_label","prev_label"], threshold=0.5),
+        #     Resized(keys=["current_image", "current_label", "prev_label"], spatial_size=self.image_size, mode=("bilinear", "nearest", "nearest")),
+        #     ToTensord(keys=["current_image", "current_label", "prev_label"], dtype=torch.float32),
+        # ])
+        
         
         self.base_transforms = Compose([
             CreatePreviousMaskd(keys=["prev_label"]),
@@ -464,16 +493,18 @@ class UnflattenSequenced(MapTransform):
     
 
 class CreatePreviousMaskd(MapTransform):
-
     def __init__(self, keys):
         super().__init__(keys)
 
     def __call__(self, data):
-
         d = dict(data)
-
-        if d["prev_label"] is None:
-            h, w = Image.open(d["image"]).size[::-1]
+    
+        if d.get("prev_label") is None:
+            img_path = d["current_image"]
+            
+            with Image.open(img_path) as img:
+                h, w = img.size[::-1]
+            
             d["prev_label"] = np.zeros((h, w), dtype=np.uint8)
-
+        
         return d
