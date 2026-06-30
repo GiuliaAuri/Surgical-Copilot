@@ -6,9 +6,10 @@ from surgical_copilot.models.conv_gru import ConvGRUCell
 from surgical_copilot.models.conv_lstm import ConvLSTMCell
 
 class CustomYOLOSemantic(nn.Module):
-    def __init__(self, in_channels=3, num_classes=1, num_masks=32):
+    def __init__(self, in_channels=3, num_classes=1, num_masks=32,**kwargs):
         super().__init__()
         self.yolo = YOLOv8Segmenter(in_channels=in_channels, num_classes=num_classes, num_masks=num_masks)
+        self.temporal_mode = kwargs.get("temporal_mode", None)
 
 
     def forward(self, x):
