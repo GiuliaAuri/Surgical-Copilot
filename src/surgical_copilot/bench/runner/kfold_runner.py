@@ -24,7 +24,7 @@ class KFoldRunner:
         # Determine the model key and check if it is temporal
         self.model_key = self.cfg.get("model_key", "unknown_model")
         self.model_cfg = self.cfg.model.get(self.model_key, {})
-        raw = self.model_cfg.get("temporal_mode", "none")
+        raw = self.model_cfg.temporal_setting.get("temporal_mode", "none")
 
         self.temporal_mode = TemporalMode(raw)
 
@@ -97,14 +97,17 @@ class KFoldRunner:
             resolve=True
         )
 
-        model_cfg.pop("temporal_mode", None)  # Remove temporal_mode from model_cfg if present
-
         if self.temporal_mode != TemporalMode.NONE:
             target_layer = model_cfg.get("temporal_target_layer", None)
 
-        model = instantiate(model_cfg).to(self.device)
+        architecture_cfg = self.cfg.model[self.model_key].architecture
 
-        if self.temporal_mode != TemporalMode.NONE:
+        model = instantiate(architecture_cfg).to(self.device)
+
+        if self.temporal_mode == TemporalMode.EARLY_FUSION:
+            
+            target_layer = self.cfg.model[self.model_key].temporal_setting.get("temporal_target_layer", None)
+
             model = load_or_create_temporal_weights(
                 model=model,
                 fold_idx=fold,
@@ -154,13 +157,18 @@ class KFoldRunner:
 
     def _build_scheduler(self, optimizer):
 
-        warmup = 5
-        max_epochs = self.cfg.trainer.trainer.max_epochs
+        cfg = self.cfg.trainer.scheduler
+
+        warmup = cfg.warmup_epochs
+        max_epochs = cfg.cosine.t_max
+
+        #warmup = 5
+        #max_epochs = self.cfg.trainer.trainer.max_epochs
 
         return SequentialLR(
             optimizer,
             schedulers=[
-                LinearLR(optimizer, start_factor=0.01, total_iters=warmup),
+                LinearLR(optimizer, start_factor=cfg.warmup_start_factor, total_iters=warmup),
                 CosineAnnealingLR(optimizer, T_max=max_epochs - warmup)
             ],
             milestones=[warmup]

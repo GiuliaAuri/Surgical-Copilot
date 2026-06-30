@@ -20,6 +20,14 @@ optimizer:
 #  T_max: ${trainer.trainer.max_epochs}
 #  eta_min: 1e-6
 
+scheduler:
+
+    warmup_epochs: 5
+    warmup_start_factor: 0.01
+
+    cosine:
+      t_max: ${trainer.trainer.max_epochs}
+
 # Scaler for mixed precision training
 scaler:
   _target_: torch.cuda.amp.GradScaler
