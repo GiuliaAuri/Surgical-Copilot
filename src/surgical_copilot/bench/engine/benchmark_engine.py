@@ -384,8 +384,8 @@ class BenchmarkEngine:
 
         model_name = self.cfg.model_key 
         
-        #base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        base_dir = Path("/homes/gauri/lab/results")
+        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
+        #base_dir = Path("/homes/gauri/lab/results")
         weights_dir = base_dir / model_name
         weights_dir.mkdir(parents=True, exist_ok=True)
         

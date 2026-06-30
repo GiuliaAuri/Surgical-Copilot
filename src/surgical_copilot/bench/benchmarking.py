@@ -37,6 +37,7 @@ def benchmarking(cfg: DictConfig):
         
         # Estraiamo e RIMUOVIAMO is_temporal dal dizionario (di default False se non specificato).
         # In questo modo Hydra non andrà in crash cercando di passarlo all' __init__ del modello.
+        model_cfg.pop("temporal_mode", None)  
         is_temporal_model = model_cfg.pop("is_temporal", False)
         target_layer = model_cfg.pop("temporal_target_layer", None)
 
