@@ -169,6 +169,8 @@ unet_plus_plus:
   architecture:
     _target_: monai.networks.nets.BasicUNetPlusPlus
     out_channels: 1
+    spatial_dims: 2         
+    in_channels: 3
     features: [32, 64, 128, 256, 512, 32]
     deep_supervision: False
 
@@ -225,8 +227,8 @@ yolo_early_fusion_warmup_on:
     num_classes: 1
     num_masks: 32
 
-  temporal_mode:
-    temporal_setting: "early_fusion"
+  temporal_setting:
+    temporal_mode: "early_fusion"
     temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
     warmup_epochs: 5
 
@@ -237,8 +239,8 @@ yolo_early_fusion_warmup_off:
     num_classes: 1
     num_masks: 32
 
-  temporal_mode:
-    temporal_setting: "early_fusion"
+  temporal_setting:
+    temporal_mode: "early_fusion"
     temporal_target_layer: none
     warmup_epochs: 0
 

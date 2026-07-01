@@ -170,12 +170,14 @@ class BenchmarkEngine:
         }
 
         # Warmup GPU
-        with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-
-            if self.device.type == "cuda":
-                dummy = torch.randn(1, *next(iter(self.val_loader))["image"].shape[1:]).to(self.device)
+        if self.device.type == "cuda":
+            # Crea un tensore dummy con la forma corretta (B, C, H, W)
+            dummy_input = torch.randn(1, 3, self.cfg.data.img_size[0], self.cfg.data.img_size[1]).to(self.device)
+            
+            # Scalda solo il modello, non il metodo _prepare_inputs
+            with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                 for _ in range(5):
-                    _ = self._prepare_inputs(dummy)
+                    _ = self.model(dummy_input)
 
         with torch.inference_mode():
             self.dice_metric.reset()
@@ -382,8 +384,8 @@ class BenchmarkEngine:
 
         model_name = self.cfg.model_key 
         
-        #base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        base_dir = Path("/homes/gauri/lab/results")
+        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
+        #base_dir = Path("/homes/gauri/lab/results")
         weights_dir = base_dir / model_name
         weights_dir.mkdir(parents=True, exist_ok=True)
         
