@@ -158,7 +158,7 @@ class ConvLSTM(nn.Module):
         self,
         X: torch.Tensor,
         initial_states: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
-    ) -> Tuple[List[torch.Tensor], List[Tuple[torch.Tensor, torch.Tensor]]]:
+    ):
         """
         Parameters
         ----------
@@ -204,4 +204,7 @@ class ConvLSTM(nn.Module):
         if not self.return_sequence:
             layer_outputs = [o[:, -1] for o in layer_outputs]
 
-        return layer_outputs, states
+        last_layer_output = layer_outputs[-1]  # (B, T, C_hid, H, W) or (B, C_hid, H, W)
+        last_states = states[-1]               # (H_T, C_T)
+
+        return last_layer_output, last_states

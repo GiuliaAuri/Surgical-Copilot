@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from typing import List, Tuple, Optional
 
 class ConvGRUCell(nn.Module):
     """
@@ -31,3 +32,85 @@ class ConvGRUCell(nn.Module):
         h_next = (1 - z) * h_prev + z * h_candidate
         
         return h_next
+    
+
+# ---------------------------------------------------------------------------
+# ConvGRU — multi-layer, multi-step
+# ---------------------------------------------------------------------------
+
+class ConvGRU(nn.Module):
+    def __init__(
+        self,
+        in_channels: int,
+        hidden_channels: List[int],
+        kernel_sizes: List[int | Tuple[int, int]],
+        bias: bool = True,   # kept for API compatibility (unused)
+        return_sequence: bool = True,
+    ):
+        super().__init__()
+
+        assert len(hidden_channels) == len(kernel_sizes)
+
+        self.num_layers = len(hidden_channels)
+        self.return_sequence = return_sequence
+
+        self.cells = nn.ModuleList()
+        for l in range(self.num_layers):
+            c_in = in_channels if l == 0 else hidden_channels[l - 1]
+            self.cells.append(
+                ConvGRUCell(c_in, hidden_channels[l], kernel_sizes[l])
+            )
+
+    def forward(
+        self,
+        X: torch.Tensor,
+        initial_states: Optional[List[torch.Tensor]] = None,
+    ):
+        """
+        X: (B, T, C, H, W)
+
+        returns:
+            last_layer_output: (B, T, C, H, W) or (B, C, H, W)
+            last_states: list of final hidden states per layer
+        """
+
+        B, T, _, H, W = X.shape
+
+        if initial_states is None:
+            states = [None] * self.num_layers
+        else:
+            states = list(initial_states)
+
+        layer_outputs = []
+        current_input = X
+
+        for l, cell in enumerate(self.cells):
+
+            h = states[l]
+            if h is None:
+                h = torch.zeros(
+                    B, cell.hidden_dim, H, W,
+                    device=X.device,
+                    dtype=X.dtype
+                )
+
+            h_list = []
+
+            for t in range(T):
+                h = cell(current_input[:, t], h)
+                h_list.append(h)
+
+            seq = torch.stack(h_list, dim=1)
+
+            if not self.return_sequence:
+                seq = seq[:, -1]
+
+            layer_outputs.append(seq)
+            current_input = seq
+
+            states[l] = h
+
+        last_layer_output = layer_outputs[-1]
+        last_states = states
+
+        return last_layer_output, last_states

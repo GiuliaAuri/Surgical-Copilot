@@ -337,14 +337,6 @@ class HemosetDataSequences(HemosetDataSet):
         self.sequence_length = sequence_length
         self.overlapping = overlapping
 
-        existing_transforms = list(self.base_transforms.transforms)
-        
-        existing_transforms.append(
-            UnflattenSequenced(keys=["image", "label"], sequence_length=self.sequence_length)
-        )
-        
-        self.base_transforms = Compose(existing_transforms)
-
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
         patients = sorted(list(self.patient_data.keys()))
