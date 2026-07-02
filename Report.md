@@ -15,36 +15,36 @@ Questa tabella espone i risultati sintetici delle performance dei modelli consid
 
 ### Metriche per fold
 
-| Modello | Fold | Dice | IoU | HD95 |
+| Fold | Modello | Dice | IoU | HD95 |
 | --- | --- | --- | --- | --- |
-| unet | 0 | 0.655 | 0.536 | 129.5 |
-| unet | 1 | 0.605 | 0.490 | 148.9 |
-| unet | 2 | 0.638 | 0.523 | 123.6 |
-| unet | 3 | 0.569 | 0.463 | 165.4 |
-| unet | 4 | 0.597 | 0.489 | 149.6 |
-| unet_resnet18 | 0 | 0.627 | 0.509 | 146.5 |
-| unet_resnet18 | 1 | 0.618 | 0.504 | 134.1 |
-| unet_resnet18 | 2 | 0.596 | 0.485 | 154.2 |
-| unet_resnet18 | 3 | 0.551 | 0.450 | 167.6 |
-| unet_resnet18 | 4 | 0.643 | 0.518 | 139.1 |
-| unet_plus_plus | 0 | 0.650 | 0.532 | 134.9 |
-| unet_plus_plus | 1 | 0.673 | 0.550 | 124.9 |
-| unet_plus_plus | 2 | 0.642 | 0.523 | 139.8 |
-| unet_plus_plus_resnet18 | 0 | 0.686 | 0.560 | 142.1 |
-| unet_plus_plus_resnet18 | 1 | 0.637 | 0.517 | 155.0 |
-| unet_plus_plus_resnet18 | 2 | 0.622 | 0.501 | 154.0 |
-| unet_plus_plus_resnet18 | 3 | 0.532 | 0.435 | 169.5 |
-| unet_plus_plus_resnet18 | 4 | 0.623 | 0.492 | 136.0 |
-| swin_unetr | 0 | 0.665 | 0.536 | 134.6 |
-| swin_unetr | 1 | 0.598 | 0.495 | 149.4 |
-| swin_unetr | 2 | 0.603 | 0.490 | 158.3 |
-| swin_unetr | 3 | 0.547 | 0.447 | 170.8 |
-| swin_unetr | 4 | 0.629 | 0.508 | 136.5 |
-| yolo_v8_seg | 0 | 0.643 | 0.519 | 142.5 |
-| yolo_v8_seg | 1 | 0.603 | 0.490 | 148.2 |
-| yolo_v8_seg | 2 | 0.595 | 0.482 | 147.4 |
-| yolo_v8_seg | 3 | 0.539 | 0.436 | 157.0 |
-| yolo_v8_seg | 4 | 0.613 | 0.487 | 130.8 |
+| **Fold 0** | unet | 0.655 | 0.536 | 129.5 |
+|  | unet_resnet18 | 0.627 | 0.509 | 146.5 |
+|  | unet_plus_plus | 0.650 | 0.532 | 134.9 |
+|  | unet_plus_plus_resnet18 | 0.686 | 0.560 | 142.1 |
+|  | swin_unetr | 0.665 | 0.536 | 134.6 |
+|  | yolo_v8_seg | 0.643 | 0.519 | 142.5 |
+| **Fold 1** | unet | 0.605 | 0.490 | 148.9 |
+|  | unet_resnet18 | 0.618 | 0.504 | 134.1 |
+|  | unet_plus_plus | 0.673 | 0.550 | 124.9 |
+|  | unet_plus_plus_resnet18 | 0.637 | 0.517 | 155.0 |
+|  | swin_unetr | 0.598 | 0.495 | 149.4 |
+|  | yolo_v8_seg | 0.603 | 0.490 | 148.2 |
+| **Fold 2** | unet | 0.638 | 0.523 | 123.6 |
+|  | unet_resnet18 | 0.596 | 0.485 | 154.2 |
+|  | unet_plus_plus | 0.642 | 0.523 | 139.8 |
+|  | unet_plus_plus_resnet18 | 0.622 | 0.501 | 154.0 |
+|  | swin_unetr | 0.603 | 0.490 | 158.3 |
+|  | yolo_v8_seg | 0.595 | 0.482 | 147.4 |
+| **Fold 3** | unet | 0.569 | 0.463 | 165.4 |
+|  | unet_resnet18 | 0.551 | 0.450 | 167.6 |
+|  | unet_plus_plus_resnet18 | 0.532 | 0.435 | 169.5 |
+|  | swin_unetr | 0.547 | 0.447 | 170.8 |
+|  | yolo_v8_seg | 0.539 | 0.436 | 157.0 |
+| **Fold 4** | unet | 0.597 | 0.489 | 149.6 |
+|  | unet_resnet18 | 0.643 | 0.518 | 139.1 |
+|  | unet_plus_plus_resnet18 | 0.623 | 0.492 | 136.0 |
+|  | swin_unetr | 0.629 | 0.508 | 136.5 |
+|  | yolo_v8_seg | 0.613 | 0.487 | 130.8 |
 
 
 ### U-Net baseline senza ResNet
