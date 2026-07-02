@@ -1,10 +1,15 @@
 import torch
 import torch.nn as nn
 import os
+import logging
 from monai.networks.nets.unet import UNet
 
-from surgical_copilot.models.conv_gru import ConvGRU
-from surgical_copilot.models.conv_lstm import ConvLSTM
+from src.surgical_copilot.models.conv_gru import ConvGRU
+from src.surgical_copilot.models.conv_lstm import ConvLSTM
+
+# Configurazione del logger
+logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: [%(name)s] %(message)s')
+logger = logging.getLogger("RecurrentUNet")
 
 class RecurrentWrapper(nn.Module):
 
@@ -31,8 +36,12 @@ class RecurrentWrapper(nn.Module):
             raise ValueError(f"Unsupported recurrent_type: {recurrent_type}")
 
     def forward(self, x, states=None):
-        # x shape: (B, T, C, H, W)
+        # x shape attesa: (B, T, C, H, W)
+        logger.debug(f"[RecurrentWrapper] Input shape (B, T, C, H, W): {x.shape}")
+        
         output_seq, _ = self.rnn(x, states)
+        
+        logger.debug(f"[RecurrentWrapper] Output shape (B, T, C, H, W): {output_seq.shape}")
         return output_seq
 
 
@@ -47,15 +56,20 @@ class InjectedBottleneck(nn.Module):
         self.current_T = 1
 
     def forward(self, x):
-
+        logger.debug(f"[InjectedBottleneck] Input flat shape (B*T, C, H, W): {x.shape}")
+        
         x_spatial = self.spatial_layer(x)
+        logger.debug(f"[InjectedBottleneck] Post-spatial layer shape (B*T, C_out, H_out, W_out): {x_spatial.shape}")
 
         B, C, H, W = x_spatial.shape
+        
         x_seq = x_spatial.view(self.current_B, self.current_T, C, H, W)
+        logger.debug(f"[InjectedBottleneck] Sequence unflattening per RNN (B={self.current_B}, T={self.current_T}): {x_seq.shape}")
 
-        output_seq = self.recurrent_wrapper(x_seq)[0]
+        output_seq = self.recurrent_wrapper(x_seq)
 
         output_flat = output_seq.contiguous().view(B, C, H, W)
+        logger.debug(f"[InjectedBottleneck] Output flat shape (ritorno alla U-Net): {output_flat.shape}")
 
         return output_flat
 
@@ -111,17 +125,21 @@ class RecurrentUNet(nn.Module):
     def load_spatial_weights(self, path, device):
         if os.path.exists(path):
             self.unet.load_state_dict(torch.load(path, map_location=device))
-            print(f"[*] [RecurrentUNet]: Pesi pre-addestrati spaziali caricati con successo.")
+            logger.info(f"Pesi pre-addestrati spaziali caricati con successo da {path}.")
         else:
-            print(f"[!] [RecurrentUNet]: File di checkpoint {path} non trovato. Inizializzazione casuale.")
+            logger.warning(f"File di checkpoint {path} non trovato. Inizializzazione casuale.")
         
     def patch_bottleneck(self):
         if self._is_patched:
             return
         
-        self._inject_temporal_bottleneck(self.unet.model)
+        patched = self._inject_temporal_bottleneck(self.unet.model)
         self._is_patched = True
-        print("[*] [RecurrentUNet]: Spatial-temporal bottleneck patch applied successfully.")
+        
+        if patched:
+            logger.info("Spatial-temporal bottleneck patch applicata con successo.")
+        else:
+            logger.error("Impossibile applicare la patch. Struttura del sottomodulo non riconosciuta.")
 
     def _inject_temporal_bottleneck(self, module):
         if isinstance(module, nn.Sequential) and len(module) >= 3:
@@ -138,71 +156,29 @@ class RecurrentUNet(nn.Module):
                 
         return False
 
-    def forward(self, x):
-        B, T, C, H, W = x.shape
+    def forward(self, x, seq_len=None):
+        
+        assert seq_len is not None, "seq_len must be provided for the forward pass."
+        
+        logger.debug(f"[RecurrentUNet Forward] Input originale shape: {x.shape} con seq_len={seq_len}")
+        
+        BT, C, H, W = x.shape
+        B = BT // seq_len 
+        T = seq_len
 
+        # Passaggio di stato per informare il bottleneck delle dimensioni sequenziali
         self.injected_module.current_B = B
         self.injected_module.current_T = T
 
         x_flat = x.view(B * T, C, H, W)
-
+        
+        # Forward dell'intera U-Net (che intercetterà il bottleneck modificato)
         logits_flat = self.unet(x_flat)
+        logger.debug(f"[RecurrentUNet Forward] Logits flat da U-Net: {logits_flat.shape}")
 
         _, C_out, H_out, W_out = logits_flat.shape
         logits_seq = logits_flat.view(B, T, C_out, H_out, W_out)
+        
+        logger.debug(f"[RecurrentUNet Forward] Output sequenziale finale (B, T, C, H, W): {logits_seq.shape}")
 
         return logits_seq
-
-def main():
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # =========================
-    # 1. Config modello
-    # =========================
-    model = RecurrentUNet(
-        spatial_dims=2,
-        in_channels=3,
-        out_channels=1,
-        channels=[32, 64, 128, 256, 512],
-        strides=[2, 2, 2, 2],
-        num_res_units=2,
-        recurrent_type="gru",
-        recurrent_layers=1,
-    ).to(device)
-
-    model.eval()
-
-    # =========================
-    # 2. Fake input sequence
-    # =========================
-    B = 2
-    T = 5
-    C = 3
-    H = 256
-    W = 256
-
-    x = torch.randn(B, T, C, H, W).to(device)
-
-    # =========================
-    # 3. Forward pass
-    # =========================
-    with torch.no_grad():
-        logits = model(x)
-
-    # =========================
-    # 4. Check output
-    # =========================
-    print("\n===== OUTPUT SHAPE =====")
-    print("Input :", x.shape)
-    print("Output:", logits.shape)
-
-    # sanity check
-    assert logits.shape[0] == B
-    assert logits.shape[1] == T
-
-    print("\nOK: forward pass completato correttamente.")
-
-
-if __name__ == "__main__":
-    main()
