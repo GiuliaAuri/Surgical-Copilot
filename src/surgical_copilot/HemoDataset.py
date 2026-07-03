@@ -17,7 +17,7 @@ from monai.transforms import (
     Resized,
     AsDiscreted,
     ToTensord,
-    NormalizeIntensityd,
+    NormalizeIntensityd
 )
 
 class HemosetDataSet:
@@ -51,14 +51,9 @@ class HemosetDataSet:
                 print(f"[Warning] Maschera mancante per l'immagine {img_path.name}. Skip.")
                 continue
 
-            
-            # È il primo frame se la lista per questo paziente è ancora vuota
-            is_first = (len(self.patient_data[patient_id]) == 0)
-
             self.patient_data[patient_id].append({
                 "image": str(img_path),
                 "label": str(final_mask_path)
-                #"is_first_frame": is_first  
             })
 
         if not self.patient_data:
@@ -66,11 +61,15 @@ class HemosetDataSet:
 
         print(f"[*] Dataset caricato: trovati {len(self.patient_data)} subjects (pigN) distinti.")
         print(f"[*] Totale frame validi: {sum(len(frames) for frames in self.patient_data.values())}")
-
+        
         transforms_list = [
             LoadImaged(keys=["image", "label"], reader="PILReader"),
-            EnsureChannelFirstd(keys=["image", "label"]),
+            
+            EnsureChannelFirstd(keys=["image"]),
+            EnsureChannelFirstd(keys=["label"]),
+            
             ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
+            AsDiscreted(keys=["label"], threshold=0.5),
         ]
 
         if use_imagenet_norm:
@@ -83,13 +82,13 @@ class HemosetDataSet:
                     channel_wise=True
                 )
             )
-
-        transforms_list.extend([
-            AsDiscreted(keys=["label"], threshold=0.5),
+               
+        transforms_list.extend([    
             Resized(keys=["image", "label"], spatial_size=self.image_size, mode=("bilinear", "nearest")),
             ToTensord(keys=["image", "label"], dtype=torch.float32),
         ])
         self.base_transforms = Compose(transforms_list)
+        
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
@@ -112,9 +111,7 @@ class HemosetDataSet:
             raise ValueError(f"fold_idx deve essere < {n_splits}")
 
         train_val_idx, test_idx = folds[fold_idx]
-
         train_val_patients = [patients[i] for i in train_val_idx]
-
         test_patients = [patients[i] for i in test_idx]
 
         gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
@@ -207,22 +204,43 @@ class HemosetEarlyFusion(HemosetDataSet):
 
                 self.patient_samples[patient].append(
                     {
-                        "current_image": current["image"],
-                        "current_label": current["label"],
-                        "prev_label": previous["label"] if previous else None,
+                        "image": current["image"],
+                        "label": current["label"],
+                        "prev_label": str(previous["label"]) if previous else str(current["label"]),
                         "is_first_frame": i == 0,
                     }
                 )
-        
+                
         self.base_transforms = Compose([
+            LoadImaged(keys=["image", "label", "prev_label"], reader="PILReader"),
+
+            EnsureChannelFirstd(keys=["image", "label", "prev_label"]),
+
             CreatePreviousMaskd(keys=["prev_label"]),
-            LoadImaged(keys=["current_image", "current_label", "prev_label"], reader="PILReader"),
-            EnsureChannelFirstd(keys=["current_image", "current_label", "prev_label"]),
-            ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            
-            AsDiscreted(keys=["current_label","prev_label"], threshold=0.5),
-            Resized(keys=["current_image", "current_label", "prev_label"], spatial_size=self.image_size, mode=("bilinear", "nearest", "nearest")),
-            ToTensord(keys=["current_image", "current_label", "prev_label"], dtype=torch.float32),
+
+            ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
+
+            AsDiscreted(keys=["label", "prev_label"], threshold=0.5),
+
+            Resized(
+                keys=["image", "label", "prev_label"],
+                spatial_size=self.image_size,
+                mode=("bilinear", "nearest", "nearest")
+            ),
+
+            ToTensord(keys=["image", "label", "prev_label"]),
         ])
+
+        #self.base_transforms = Compose([
+        #    
+        #    LoadImaged(keys=["current_image", "current_label", "prev_label"], reader="PILReader"),
+        #    EnsureChannelFirstd(keys=["current_image", "current_label", "prev_label"]),
+        #    CreatePreviousMaskd(keys=["prev_label"]),
+        #    ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            
+        #    AsDiscreted(keys=["current_label","prev_label"], threshold=0.5),
+        #    Resized(keys=["current_image", "current_label", "prev_label"], spatial_size=self.image_size, mode=("bilinear", "nearest", "nearest")),
+        #    ToTensord(keys=["current_image", "current_label", "prev_label"], dtype=torch.float32),
+        #])
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
@@ -283,8 +301,13 @@ class HemosetEarlyFusion(HemosetDataSet):
             f"val={len(val_files)} "
             f"test={len(test_files)}"
         )
+        
+        #train_compose = (Compose([self.base_transforms,train_transforms]) if train_transforms  else self.base_transforms)
 
-        train_compose = (Compose([self.base_transforms,train_transforms]) if train_transforms  else self.base_transforms)
+        if train_transforms:
+            train_compose = Compose([self.base_transforms, train_transforms])
+        else:
+            train_compose = self.base_transforms
 
         train_ds = CacheDataset(train_files, transform=train_compose, cache_rate=cache_rate)
         val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
@@ -297,8 +320,31 @@ class HemosetEarlyFusion(HemosetDataSet):
         return train_loader, val_loader, test_loader
 
     def get_sample(self, patient_id=None, index=None, transform=True):
-    
-        return super().get_sample(patient_id, index, transform=transform)
+
+        if patient_id is None:
+            patient_id = random.choice(list(self.patient_samples.keys()))
+
+        if patient_id not in self.patient_samples:
+            raise ValueError(f"Patient '{patient_id}' non trovato.")
+
+        files = self.patient_samples[patient_id]
+
+        if len(files) == 0:
+            raise ValueError(f"Nessun sample disponibile per '{patient_id}'.")
+
+        if index is None:
+            index = random.randrange(len(files))
+        elif index < 0 or index >= len(files):
+            raise IndexError(
+                f"Index {index} fuori range [0, {len(files)-1}] per il paziente '{patient_id}'."
+            )
+
+        sample = files[index].copy()
+
+        if transform:
+            sample = self.base_transforms(sample)
+
+        return sample
 
 class HemosetDataSequences(HemosetDataSet):
     def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42, sequence_length=5, overlapping=0.75):
@@ -307,13 +353,26 @@ class HemosetDataSequences(HemosetDataSet):
         self.sequence_length = sequence_length
         self.overlapping = overlapping
 
-        existing_transforms = list(self.base_transforms.transforms)
-        
-        existing_transforms.append(
-            UnflattenSequenced(keys=["image", "label"], sequence_length=self.sequence_length)
-        )
-        
-        self.base_transforms = Compose(existing_transforms)
+        self.frame_transforms = Compose([
+            LoadImaged(keys=["image", "label"], reader="PILReader"),
+            EnsureChannelFirstd(keys=["image", "label"]),
+
+            ScaleIntensityRanged(
+                keys=["image"],
+                a_min=0,
+                a_max=255,
+                b_min=0.0,
+                b_max=1.0,
+                clip=True
+            ),
+
+            AsDiscreted(keys=["label"], threshold=0.5),
+            ToTensord(keys=["image", "label"], dtype=torch.float32),
+        ])
+
+        self.base_transforms = Compose([
+            SequenceTransform(self.frame_transforms)
+        ])
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
@@ -403,10 +462,13 @@ class HemosetDataSequences(HemosetDataSet):
                 #         [4 5 6 7 8]
 
                 window = patient_frames[i : i + seq_len]
+
+                images= [frame["image"] for frame in window]
+                labels= [frame["label"] for frame in window]
                 
                 seq_sample = {
-                    "image": [frame["image"] for frame in window],
-                    "label": [frame["label"] for frame in window],
+                    "image": images,
+                    "label": labels,
                     "sequence_id": f"{p}_{i}",
                     "patient_id": p,
                     "start_idx": i
@@ -415,8 +477,8 @@ class HemosetDataSequences(HemosetDataSet):
 
         return sequences
     
-    def get_sample(self, patient_id=None, index=None, transform=True):
-        if patient_id:
+    def get_sample(self, patient_id=None, index=None, transform=False):
+        if patient_id is not None:
             if patient_id not in self.patient_data:
                 raise ValueError(f"{patient_id} non esiste nel dataset")
             patients_to_sample = [patient_id]
@@ -425,11 +487,11 @@ class HemosetDataSequences(HemosetDataSet):
 
         sequences = self._create_sliding_window(patients_to_sample)
 
-        if not sequences:
+        if len(sequences) == 0:
             raise RuntimeError("Nessuna sequenza disponibile.")
 
         if index is None:
-            sample = self.rng.choice(sequences)
+            sample = random.choice(sequences)
         else:
             sample = sequences[index % len(sequences)]
 
@@ -442,9 +504,36 @@ class HemosetDataSequences(HemosetDataSet):
 
 from monai.transforms import MapTransform, Compose
 
+class SequenceTransform(MapTransform):
+
+    def __init__(self, frame_transform):
+        self.frame_transform = frame_transform
+
+    def __call__(self, data):
+
+        images = []
+        labels = []
+
+        for img_path, lbl_path in zip(data["image"], data["label"]):
+
+            sample = {
+                "image": img_path,
+                "label": lbl_path,
+            }
+
+            sample = self.frame_transform(sample)
+
+            images.append(sample["image"])
+            labels.append(sample["label"])
+
+        data["image"] = torch.stack(images)   # (T,C,H,W)
+        data["label"] = torch.stack(labels)   # (T,1,H,W)
+
+        return data
+
 class UnflattenSequenced(MapTransform):
     """
-    Reshape the tensors from (S*C, H, W) to (S, C, H, W).
+    Reshape the tensors from (S*C, H, W) -> (S, C, H, W).
     """
     def __init__(self, keys, sequence_length, allow_missing_keys=False):
         super().__init__(keys, allow_missing_keys)
@@ -457,23 +546,18 @@ class UnflattenSequenced(MapTransform):
                 SC, H, W = d[key].shape
                 
                 C = SC // self.seq_len
-                
+                if d[key].ndim != 3:
+                    raise ValueError(f"Unexpected shape: {d[key].shape}")
                 d[key] = d[key].view(self.seq_len, C, H, W)
                 
         return d
     
 
 class CreatePreviousMaskd(MapTransform):
-
-    def __init__(self, keys):
-        super().__init__(keys)
-
     def __call__(self, data):
-
         d = dict(data)
 
         if d["prev_label"] is None:
-            h, w = Image.open(d["image"]).size[::-1]
-            d["prev_label"] = np.zeros((h, w), dtype=np.uint8)
+            d["prev_label"] = np.zeros_like(d["current_label"])
 
         return d

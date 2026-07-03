@@ -22,11 +22,31 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         # memory states
         self.recurrent_state = None
         self.mask_prev = None
+        self._current_patient = None
 
         self.temporal_metrics = {
             "consistency": TemporalConsistencyMetric(device=self.device),
             "interframe": InterFrameTemporalMetric()
         }
+
+    def _check_new_video(self, batch):
+
+        patient = batch["patient_id"]
+
+        if isinstance(patient, (list, tuple)):
+            patient = patient[0]
+
+        if isinstance(patient, torch.Tensor):
+            patient = patient.item()
+
+        if not hasattr(self, "_current_patient"):
+            self._current_patient = patient
+            self._reset_temporal_state()
+            return
+
+        if patient != self._current_patient:
+            self._current_patient = patient
+            self._reset_temporal_state()
     
     def _reset_temporal_state(self):
         self.recurrent_state = None
@@ -43,19 +63,21 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
     def _prepare_inputs(self, batch):
 
+        self._check_new_video(batch)
+
         # EARLY_FUSION mode: we expect the input to be a single frame,
         # and we concatenate the previous mask (or a zero mask if it's the first frame) 
         # to the current image. We also reset the temporal state at the beginning of each new sequence.
 
         if self.temporal_mode == TemporalMode.EARLY_FUSION:
 
-            is_first = batch["is_first_frame"]
+            #is_first = batch["is_first_frame"]
 
-            if isinstance(is_first, torch.Tensor):
-                is_first = bool(is_first[0].item())
+            #if isinstance(is_first, torch.Tensor):
+            #    is_first = bool(is_first[0].item())
 
-            if is_first:
-                self._reset_temporal_state()
+            #if is_first:
+            #    self._reset_temporal_state()
                 
             image = batch["current_image"].to(self.device)
 
@@ -89,7 +111,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         images = batch["image"].to(self.device)  # shape: (B, T, C, H, W)
         labels = batch["label"].to(self.device)  # shape: (B, T, 1, H, W)
 
-        self._reset_temporal_state()
+        #self._reset_temporal_state()
 
         self.last_x = images.clone().detach()  # Store the last input for temporal metrics
 
@@ -119,13 +141,20 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
         assert x.ndim == 5, "Expected input x to be a 5D tensor of shape (B, T, C, H, W)"
 
+    def _forward_step(self, x, y=None):
+        if y is None: 
+            y = self.current_y
+    
         B, T, C, H, W = x.shape
         total_loss = 0.0
         all_logits = []
 
         for t in range(T):
-            x_t = x[:, t] # (B, C, H, W)
-            y_t = y[:, t] # (B, 1, H, W)
+            x_t = x[:, t] 
+            y_t = y[:, t]
+
+            # Inizializza logits_t per sicurezza
+            logits_t = None
 
             logits_t, self.recurrent_state = self.model(x_t, self.recurrent_state)
 

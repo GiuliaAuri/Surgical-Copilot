@@ -1,95 +1,0 @@
-Modello: r_unet
-Script avviato!
-[*] Device selezionato: cuda
-[*] Loading dataset
-[*] Dataset caricato: trovati 10 subjects (pigN) distinti.
-[*] Totale frame validi: 962
-
-##################################################
-[*] Fold 1/5
-##################################################
-
-[*] Fold info
-Train pigs: ['pig11', 'pig4', 'pig2', 'pig1', 'pig3', 'pig6']
-Val pigs:   ['pig9', 'pig10']
-Test pigs:  ['pig7', 'pig5']
-[*] Samples train=444 val=323 test=195
-Loading dataset:   0%|          | 0/444 [00:00<?, ?it/s]Loading dataset: 100%|██████████| 444/444 [00:00<00:00, 1364301.08it/s]
-Loading dataset:   0%|          | 0/323 [00:00<?, ?it/s]Loading dataset:   1%|          | 4/323 [00:00<00:07, 39.96it/s]Loading dataset:   3%|▎         | 11/323 [00:00<00:05, 54.28it/s]Loading dataset:   6%|▌         | 18/323 [00:00<00:05, 57.85it/s]Loading dataset:   8%|▊         | 25/323 [00:00<00:05, 59.37it/s]Loading dataset:  10%|▉         | 32/323 [00:00<00:04, 60.02it/s]Loading dataset:  12%|█▏        | 39/323 [00:00<00:04, 60.47it/s]Loading dataset:  14%|█▍        | 46/323 [00:00<00:04, 61.36it/s]Loading dataset:  16%|█▋        | 53/323 [00:00<00:04, 61.00it/s]Loading dataset:  19%|█▊        | 60/323 [00:01<00:04, 60.71it/s]Loading dataset:  21%|██        | 67/323 [00:01<00:04, 60.98it/s]Loading dataset:  23%|██▎       | 74/323 [00:01<00:04, 61.00it/s]Loading dataset:  25%|██▌       | 81/323 [00:01<00:03, 61.32it/s]Loading dataset:  27%|██▋       | 88/323 [00:01<00:03, 61.70it/s]Loading dataset:  29%|██▉       | 95/323 [00:01<00:03, 61.84it/s]Loading dataset:  32%|███▏      | 102/323 [00:01<00:03, 61.68it/s]Loading dataset:  34%|███▎      | 109/323 [00:01<00:03, 62.04it/s]Loading dataset:  36%|███▌      | 116/323 [00:01<00:03, 62.23it/s]Loading dataset:  38%|███▊      | 123/323 [00:02<00:03, 61.98it/s]Loading dataset:  40%|████      | 130/323 [00:02<00:03, 61.63it/s]Loading dataset:  42%|████▏     | 137/323 [00:02<00:03, 60.97it/s]Loading dataset:  45%|████▍     | 144/323 [00:02<00:02, 61.53it/s]Loading dataset:  47%|████▋     | 151/323 [00:02<00:02, 60.95it/s]Loading dataset:  49%|████▉     | 158/323 [00:02<00:02, 60.32it/s]Loading dataset:  51%|█████     | 165/323 [00:02<00:02, 58.37it/s]Loading dataset:  53%|█████▎    | 171/323 [00:02<00:02, 55.21it/s]Loading dataset:  55%|█████▍    | 177/323 [00:02<00:02, 53.56it/s]Loading dataset:  57%|█████▋    | 183/323 [00:03<00:02, 52.27it/s]Loading dataset:  59%|█████▊    | 189/323 [00:03<00:02, 50.89it/s]Loading dataset:  60%|██████    | 195/323 [00:03<00:02, 49.92it/s]Loading dataset:  62%|██████▏   | 201/323 [00:03<00:02, 48.90it/s]Loading dataset:  64%|██████▍   | 206/323 [00:03<00:02, 48.68it/s]Loading dataset:  65%|██████▌   | 211/323 [00:03<00:02, 48.67it/s]Loading dataset:  67%|██████▋   | 216/323 [00:03<00:02, 48.67it/s]Loading dataset:  68%|██████▊   | 221/323 [00:03<00:02, 48.11it/s]Loading dataset:  70%|██████▉   | 226/323 [00:04<00:02, 47.60it/s]Loading dataset:  72%|███████▏  | 231/323 [00:04<00:01, 47.60it/s]Loading dataset:  73%|███████▎  | 236/323 [00:04<00:01, 47.51it/s]Loading dataset:  75%|███████▍  | 241/323 [00:04<00:01, 47.54it/s]Loading dataset:  76%|███████▌  | 246/323 [00:04<00:01, 47.84it/s]Loading dataset:  78%|███████▊  | 251/323 [00:04<00:01, 48.11it/s]Loading dataset:  79%|███████▉  | 256/323 [00:04<00:01, 48.41it/s]Loading dataset:  81%|████████  | 261/323 [00:04<00:01, 48.42it/s]Loading dataset:  82%|████████▏ | 266/323 [00:04<00:01, 48.47it/s]Loading dataset:  84%|████████▍ | 271/323 [00:04<00:01, 48.24it/s]Loading dataset:  85%|████████▌ | 276/323 [00:05<00:00, 47.51it/s]Loading dataset:  87%|████████▋ | 281/323 [00:05<00:00, 47.31it/s]Loading dataset:  89%|████████▊ | 286/323 [00:05<00:00, 47.41it/s]Loading dataset:  90%|█████████ | 291/323 [00:05<00:00, 47.81it/s]Loading dataset:  92%|█████████▏| 296/323 [00:05<00:00, 47.66it/s]Loading dataset:  93%|█████████▎| 301/323 [00:05<00:00, 47.94it/s]Loading dataset:  95%|█████████▍| 306/323 [00:05<00:00, 47.78it/s]Loading dataset:  96%|█████████▋| 311/323 [00:05<00:00, 47.40it/s]Loading dataset:  98%|█████████▊| 316/323 [00:05<00:00, 47.65it/s]Loading dataset:  99%|█████████▉| 321/323 [00:05<00:00, 47.72it/s]Loading dataset: 100%|██████████| 323/323 [00:06<00:00, 53.51it/s]
-Loading dataset:   0%|          | 0/195 [00:00<?, ?it/s]Loading dataset:   2%|▏         | 4/195 [00:00<00:05, 36.59it/s]Loading dataset:   5%|▍         | 9/195 [00:00<00:04, 38.62it/s]Loading dataset:   7%|▋         | 14/195 [00:00<00:04, 39.42it/s]Loading dataset:   9%|▉         | 18/195 [00:00<00:04, 39.60it/s]Loading dataset:  11%|█▏        | 22/195 [00:00<00:04, 39.66it/s]Loading dataset:  13%|█▎        | 26/195 [00:00<00:04, 39.03it/s]Loading dataset:  15%|█▌        | 30/195 [00:00<00:04, 39.00it/s]Loading dataset:  17%|█▋        | 34/195 [00:00<00:04, 38.70it/s]Loading dataset:  19%|█▉        | 38/195 [00:00<00:04, 38.88it/s]Loading dataset:  22%|██▏       | 43/195 [00:01<00:03, 41.03it/s]Loading dataset:  25%|██▍       | 48/195 [00:01<00:03, 43.06it/s]Loading dataset:  27%|██▋       | 53/195 [00:01<00:03, 44.39it/s]Loading dataset:  30%|██▉       | 58/195 [00:01<00:03, 45.21it/s]Loading dataset:  32%|███▏      | 63/195 [00:01<00:02, 45.88it/s]Loading dataset:  35%|███▍      | 68/195 [00:01<00:02, 46.77it/s]Loading dataset:  37%|███▋      | 73/195 [00:01<00:02, 46.72it/s]Loading dataset:  40%|████      | 78/195 [00:01<00:02, 47.57it/s]Loading dataset:  43%|████▎     | 83/195 [00:01<00:02, 47.69it/s]Loading dataset:  45%|████▌     | 88/195 [00:02<00:02, 47.42it/s]Loading dataset:  48%|████▊     | 93/195 [00:02<00:02, 47.61it/s]Loading dataset:  50%|█████     | 98/195 [00:02<00:02, 47.35it/s]Loading dataset:  53%|█████▎    | 103/195 [00:02<00:01, 47.99it/s]Loading dataset:  55%|█████▌    | 108/195 [00:02<00:01, 48.35it/s]Loading dataset:  58%|█████▊    | 113/195 [00:02<00:01, 48.24it/s]Loading dataset:  61%|██████    | 118/195 [00:02<00:01, 47.90it/s]Loading dataset:  63%|██████▎   | 123/195 [00:02<00:01, 47.38it/s]Loading dataset:  66%|██████▌   | 128/195 [00:02<00:01, 47.86it/s]Loading dataset:  68%|██████▊   | 133/195 [00:02<00:01, 47.96it/s]Loading dataset:  71%|███████   | 138/195 [00:03<00:01, 47.96it/s]Loading dataset:  73%|███████▎  | 143/195 [00:03<00:01, 48.15it/s]Loading dataset:  76%|███████▌  | 148/195 [00:03<00:00, 48.24it/s]Loading dataset:  78%|███████▊  | 153/195 [00:03<00:00, 48.01it/s]Loading dataset:  81%|████████  | 158/195 [00:03<00:00, 47.65it/s]Loading dataset:  84%|████████▎ | 163/195 [00:03<00:00, 47.76it/s]Loading dataset:  86%|████████▌ | 168/195 [00:03<00:00, 47.64it/s]Loading dataset:  89%|████████▊ | 173/195 [00:03<00:00, 47.97it/s]Loading dataset:  92%|█████████▏| 179/195 [00:03<00:00, 48.83it/s]Loading dataset:  94%|█████████▍| 184/195 [00:04<00:00, 49.09it/s]Loading dataset:  97%|█████████▋| 189/195 [00:04<00:00, 49.04it/s]Loading dataset:  99%|█████████▉| 194/195 [00:04<00:00, 48.84it/s]Loading dataset: 100%|██████████| 195/195 [00:04<00:00, 45.92it/s]
-
-==============================
-[*] BENCHMARKING MODEL: r_unet
-==============================
-Error executing job with overrides: ['model_key=r_unet']
-Traceback (most recent call last):
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 644, in _locate
-    obj = getattr(obj, part)
-          ^^^^^^^^^^^^^^^^^^
-AttributeError: module 'surgical_copilot.models.Recurrent_U_Net' has no attribute 'recurrent_U_net'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 650, in _locate
-    obj = import_module(mod)
-          ^^^^^^^^^^^^^^^^^^
-  File "/homes/admin/spack/opt/spack/linux-ivybridge/anaconda3-2023.09-0-dyblbfizocp3rfv77i4yhkbvbb5xamnh/lib/python3.11/importlib/__init__.py", line 126, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
-  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 1140, in _find_and_load_unlocked
-ModuleNotFoundError: No module named 'surgical_copilot.models.Recurrent_U_Net.recurrent_U_net'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 134, in _resolve_target
-    target = _locate(target)
-             ^^^^^^^^^^^^^^^
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 653, in _locate
-    raise ImportError(
-ImportError: Error loading 'surgical_copilot.models.Recurrent_U_Net.recurrent_U_net.RecurrentUNet':
-ModuleNotFoundError("No module named 'surgical_copilot.models.Recurrent_U_Net.recurrent_U_net'")
-Are you sure that 'recurrent_U_net' is importable from module 'surgical_copilot.models.Recurrent_U_Net'?
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/homes/cmininno/cvcs2026/Surgical-Copilot/src/surgical_copilot/bench/benchmarking.py", line 170, in <module>
-    benchmarking()
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/main.py", line 94, in decorated_main
-    _run_hydra(
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 394, in _run_hydra
-    _run_app(
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 457, in _run_app
-    run_and_report(
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 223, in run_and_report
-    raise ex
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 220, in run_and_report
-    return func()
-           ^^^^^^
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/utils.py", line 458, in <lambda>
-    lambda: hydra.run(
-            ^^^^^^^^^^
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/hydra.py", line 132, in run
-    _ = ret.return_value
-        ^^^^^^^^^^^^^^^^
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/core/utils.py", line 260, in return_value
-    raise self._return_value
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/core/utils.py", line 186, in run_job
-    ret.return_value = task_function(task_cfg)
-                       ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/homes/cmininno/cvcs2026/Surgical-Copilot/src/surgical_copilot/bench/benchmarking.py", line 64, in benchmarking
-    model = instantiate(model_cfg).to(device)
-            ^^^^^^^^^^^^^^^^^^^^^^
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 226, in instantiate
-    return instantiate_node(
-           ^^^^^^^^^^^^^^^^^
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 333, in instantiate_node
-    _target_ = _resolve_target(node.get(_Keys.TARGET), full_key)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/homes/cmininno/cvcs2026/venv/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 139, in _resolve_target
-    raise InstantiationException(msg) from e
-hydra.errors.InstantiationException: Error locating target 'surgical_copilot.models.Recurrent_U_Net.recurrent_U_net.RecurrentUNet', set env var HYDRA_FULL_ERROR=1 to see chained exception.
