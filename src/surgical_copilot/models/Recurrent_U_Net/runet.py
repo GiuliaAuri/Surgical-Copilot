@@ -61,14 +61,16 @@ class InjectedBottleneck(nn.Module):
         x_spatial = self.spatial_layer(x)
         logger.debug(f"[InjectedBottleneck] Post-spatial layer shape (B*T, C_out, H_out, W_out): {x_spatial.shape}")
 
-        B, C, H, W = x_spatial.shape
-        
+        BxT, C, H, W = x_spatial.shape
+
+        assert BxT == self.current_B * self.current_T, f"Inconsistent shape: {BxT} vs {self.current_B*self.current_T}"
+
         x_seq = x_spatial.view(self.current_B, self.current_T, C, H, W)
         logger.debug(f"[InjectedBottleneck] Sequence unflattening per RNN (B={self.current_B}, T={self.current_T}): {x_seq.shape}")
 
         output_seq = self.recurrent_wrapper(x_seq)
 
-        output_flat = output_seq.contiguous().view(B, C, H, W)
+        output_flat = output_seq.contiguous().view(BxT, C, H, W)
         logger.debug(f"[InjectedBottleneck] Output flat shape (ritorno alla U-Net): {output_flat.shape}")
 
         return output_flat
@@ -156,28 +158,22 @@ class RecurrentUNet(nn.Module):
                 
         return False
 
-    def forward(self, x, seq_len=None):
-        
-        assert seq_len is not None, "seq_len must be provided for the forward pass."
-        
-        logger.debug(f"[RecurrentUNet Forward] Input originale shape: {x.shape} con seq_len={seq_len}")
-        
-        BT, C, H, W = x.shape
-        B = BT // seq_len 
-        T = seq_len
+    def forward(self, x):
 
-        # Passaggio di stato per informare il bottleneck delle dimensioni sequenziali
+        assert x.ndim == 5, "Input tensor must have shape (B, T, C, H, W) for the forward pass."
+    
+        B, T, C, H, W = x.shape
+
+        x_flat = x.reshape(B * T, C, H, W)
+
         self.injected_module.current_B = B
         self.injected_module.current_T = T
 
-        x_flat = x.view(B * T, C, H, W)
-        
-        # Forward dell'intera U-Net (che intercetterà il bottleneck modificato)
         logits_flat = self.unet(x_flat)
         logger.debug(f"[RecurrentUNet Forward] Logits flat da U-Net: {logits_flat.shape}")
 
         _, C_out, H_out, W_out = logits_flat.shape
-        logits_seq = logits_flat.view(B, T, C_out, H_out, W_out)
+        logits_seq = logits_flat.reshape(B, T, C_out, H_out, W_out)
         
         logger.debug(f"[RecurrentUNet Forward] Output sequenziale finale (B, T, C, H, W): {logits_seq.shape}")
 
