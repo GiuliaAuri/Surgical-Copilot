@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from surgical_copilot.models.yolov8_seg.yolov8_seg import YOLOv8Segmenter 
-from surgical_copilot.models.conv_gru import ConvGRUCell
-from surgical_copilot.models.conv_lstm import ConvLSTMCell
+from surgical_copilot.models.conv_gru import ConvGRU
+from surgical_copilot.models.conv_lstm import ConvLSTM
 
 class CustomYOLOSemantic(nn.Module):
     def __init__(self, in_channels=3, num_classes=1, num_masks=32,**kwargs):
@@ -88,3 +88,90 @@ class YOLOLateFusionTemporal(nn.Module):
         
         # Restituisce logit e lo stato (che sarà singolo per GRU o tupla per LSTM)
         return mask_logits_full, state_next
+
+class YOLOLateFusionTemporalSequential(nn.Module):
+
+    def __init__(
+            self,
+            in_channels=3,
+            num_classes=1,
+            num_masks=32,
+            recurrent_type="gru",
+            recurrent_layers=1,
+            freeze_backbone=False,
+            warmup_epochs=5,
+            pretrained_weights_path=None,
+        ):        
+        
+        super().__init__()
+        
+        # Salviamo entrambe le variabili per renderle accessibili dall'esterno
+        self.freeze_backbone = freeze_backbone
+        self.warmup_epochs = warmup_epochs
+        self.pretrained_weights_path = pretrained_weights_path
+        self.recurrent_type = recurrent_type.lower()
+        
+        # 1. IL BACKBONE SPAZIALE
+        self.yolo = YOLOv8Segmenter(in_channels=in_channels, num_classes=num_classes, num_masks=num_masks)
+        
+        bottleneck_dim = num_masks
+
+        if self.recurrent_type == "gru":
+
+            self.temporal = ConvGRU(
+                in_channels=bottleneck_dim,
+                hidden_channels=[bottleneck_dim] * recurrent_layers,
+                kernel_sizes=[3] * recurrent_layers,
+                return_sequence=True,
+            )
+
+        elif self.recurrent_type == "lstm":
+
+            self.temporal = ConvLSTM(
+                in_channels=bottleneck_dim,
+                hidden_channels=[bottleneck_dim] * recurrent_layers,
+                kernel_sizes=[3] * recurrent_layers,
+                return_sequence=True,
+            )
+
+        else:
+            raise ValueError(
+                f"Unsupported recurrent type: {recurrent_type}"
+            )
+        
+
+    def forward(self, x):
+
+        assert x.ndim == 5, "Expected input x to be a 5D tensor of shape (B, T, C, H, W)"
+
+        B, T, C, H, W = x.shape
+
+        x = x.view(B * T, C, H, W)  # Flatten the batch and time dimensions
+
+        # protos: (B*T, K, h, w)
+        # coeffs: (B*T, K)
+
+        classes, coeffs, protos = self.yolo(x)
+
+        K = coeffs.shape[1]
+        h, w = protos.shape[-2:]
+
+        coeffs = coeffs.view(B, T, K, 1, 1)
+
+        protos = protos.view(B, T, K, h, w)
+
+        coeffs, _ = self.temporal(coeffs)  # (B, T, K, 1, 1)
+
+        # broadcast su spazio
+        coeffs = coeffs.expand(-1, -1, -1, h, w)
+
+        mask_logits = (coeffs * protos).sum(dim=2)  # (B, T, h, w)
+
+        mask_logits = F.interpolate(
+            mask_logits.flatten(0,1).unsqueeze(1),
+            size=(H, W),
+            mode="bilinear",
+            align_corners=False,
+        )
+
+        return mask_logits.view(B, T, 1, H, W)
