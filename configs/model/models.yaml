@@ -101,7 +101,7 @@ unet_resnet18_early_fusion_warmup_off:
 
 r_unet_late_fusion_lstm:
   architecture:
-    _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
+    _target_: surgical_copilot.models.Recurrent_U_Net.runet.RecurrentUNet
     spatial_dims: 2
     in_channels: 3
     out_channels: 1
@@ -109,6 +109,7 @@ r_unet_late_fusion_lstm:
     strides: [2, 2, 2, 2]
     recurrent_type: "lstm"
     num_res_units: 2
+    recurrent_layers: 1  
     freeze_backbone: True
     warmup_epochs: 5
     pretrained_weights_path: "weights/Unet/best_fold0.pth"
@@ -118,7 +119,7 @@ r_unet_late_fusion_lstm:
 
 r_unet_late_fusion_gru:
   architecture:
-    _target_: surgical_copilot.models.Recurrent_U_Net.recurrent_u_net.RecurrentUNet
+    _target_: surgical_copilot.models.Recurrent_U_Net.runet.RecurrentUNet
     spatial_dims: 2
     in_channels: 3
     out_channels: 1
@@ -126,6 +127,7 @@ r_unet_late_fusion_gru:
     strides: [2, 2, 2, 2]
     recurrent_type: "lstm"
     num_res_units: 2
+    recurrent_layers: 1  
     freeze_backbone: True
     warmup_epochs: 5
     pretrained_weights_path: "weights/Unet/best_fold0.pth"
@@ -248,11 +250,12 @@ yolo_early_fusion_warmup_off:
 
 yolo_late_fusion_gru:
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
+    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
     in_channels: 3
     num_classes: 1
     num_masks: 32
     recurrent_type: "gru"
+    recurrent_layers=1,
     freeze_backbone: True
     warmup_epochs: 5
     pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
