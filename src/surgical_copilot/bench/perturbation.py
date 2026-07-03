@@ -13,8 +13,60 @@ from monai.transforms import (
     Rand2DElasticd,
     Rand2DElasticd,
     MapTransform,
-    Lambda
+    Lambda,
+    Randomizable
 )
+
+
+class TemporalConsistencyTransform(MapTransform):
+
+    def __init__(self, transform, keys):
+        self.transform = transform
+        super().__init__(keys)
+
+    def __call__(self, data):
+
+        d = dict(data)
+
+        images = d["image"]
+        masks = d["label"]
+
+        B, T = images.shape[:2]
+
+        # =========================
+        # 1. FLATTEN
+        # =========================
+        images_flat = images.reshape(B * T, *images.shape[2:])
+        masks_flat = masks.reshape(B * T, *masks.shape[2:])
+
+        out_images = []
+        out_masks = []
+
+        # =========================
+        # 2. APPLY TRANSFORM
+        # =========================
+        for i in range(B * T):
+
+            sample = {
+                "image": images_flat[i],
+                "label": masks_flat[i]
+            }
+
+            sample = self.transform(sample)
+
+            out_images.append(sample["image"])
+            out_masks.append(sample["label"])
+
+        out_images = torch.stack(out_images)
+        out_masks = torch.stack(out_masks)
+
+        # =========================
+        # 3. RE-SHAPE BACK
+        # =========================
+        d["image"] = out_images.view(B, T, *out_images.shape[1:])
+        d["label"] = out_masks.view(B, T, *out_masks.shape[1:])
+
+        return d
 
 
 class RandSpecularReflectiond(MapTransform):
@@ -120,13 +172,22 @@ class PerturbationFactory:
 
 class PerturbationPipelines:
 
+    KEY_MAPS = {
+        "standard": ["image", "label"],
+        "early_fusion": ["image", "label", "prev_label"],
+        "late_fusion": ["image", "label"]
+    }
+
     @staticmethod
-    def get_train_pipeline():
+    def get_train_pipeline(mode="standard"):
+
+        dynamic_keys = PerturbationPipelines.KEY_MAPS[mode]
+
         # same cofiguaration of Hemoset's authors for training
         return Compose([
-            #RandSpatialCropd(keys=['image', 'label'], roi_size=(320, 320), random_size=False), 
+            RandSpatialCropd(keys=dynamic_keys, roi_size=(320, 320), random_size=False), 
             RandCropByPosNegLabeld(
-                keys=['image', 'label'],
+                keys=dynamic_keys,
                 label_key='label',
                 spatial_size=(320, 320),
                 pos=2, # weight per patch with target (emorragic region)
@@ -136,31 +197,54 @@ class PerturbationPipelines:
             RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)),
 #
             # Geometry trasformation
-            RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
-            RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
-            RandRotated(keys=["image", "label"], prob=0.3, range_x=0.4, mode=("bilinear", "nearest")),
-
-            # Appearance transformation
-            Rand2DElasticd(keys=["image", "label"], prob=0.2, spacing=(20, 20), magnitude_range=(1, 2), mode=("bilinear", "nearest")),
+            RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=0),
+            RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=1),
+            RandRotated(keys=dynamic_keys, prob=0.3, range_x=0.4, mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)),
+            # Apperance transformation
+            Rand2DElasticd(keys=dynamic_keys, prob=0.2, spacing=(20, 20), magnitude_range=(1, 2), mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)),
         ])
 
     @staticmethod
-    def get_eval_scenarios():
-        # our expanded version to evalute where model fail and what are the condition
+    def get_eval_scenarios(mode="standard", is_sequential=False):
+
+        dynamic_keys = PerturbationPipelines.KEY_MAPS[mode]
+
+        wrap = (
+            lambda t: TemporalConsistencyTransform(transform=t, keys=dynamic_keys)) if is_sequential else (lambda t: t)
+
         return {
             "clean": Compose([]),
-            "noise_only": Compose([PerturbationFactory.gaussian_noise(p=1.0, std=0.2)]),
-            "blur_only": Compose([PerturbationFactory.gaussian_blur(p=1.0)]),
-            "intensity_shift_only": Compose([PerturbationFactory.intensity_shift(p=1.0, offset=0.2)]),
-            "smoke_only": Compose([PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4))]),
-            "contrast_only": Compose([PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0))]),
-            "specular_only": Compose([PerturbationFactory.specular(p=1.0, intensity=0.15)]),
+
+            "noise_only": Compose([
+                wrap(PerturbationFactory.gaussian_noise(p=1.0, std=0.2))
+            ]),
+
+            "blur_only": Compose([
+                wrap(PerturbationFactory.gaussian_blur(p=1.0))
+            ]),
+
+            "intensity_shift_only": Compose([
+                wrap(PerturbationFactory.intensity_shift(p=1.0, offset=0.2))
+            ]),
+
+            "smoke_only": Compose([
+                wrap(PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4)))
+            ]),
+
+            "contrast_only": Compose([
+                wrap(PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0)))
+            ]),
+
+            "specular_only": Compose([
+                wrap(PerturbationFactory.specular(p=1.0, intensity=0.15))
+            ]),
+
             "chirurgical_worst_case": Compose([
-                PerturbationFactory.gaussian_noise(p=1.0, std=0.2),
-                PerturbationFactory.gaussian_blur(p=1.0),
-                PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0)),
-                PerturbationFactory.specular(p=1.0, intensity=0.15),
-                PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4)),
-                PerturbationFactory.intensity_shift(p=1.0, offset=0.2)
-            ])
+                wrap(PerturbationFactory.gaussian_noise(p=1.0, std=0.2)),
+                wrap(PerturbationFactory.gaussian_blur(p=1.0)),
+                wrap(PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0))),
+                wrap(PerturbationFactory.specular(p=1.0, intensity=0.15)),
+                wrap(PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4))),
+                wrap(PerturbationFactory.intensity_shift(p=1.0, offset=0.2))
+            ]),
         }
