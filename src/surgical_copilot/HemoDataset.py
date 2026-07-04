@@ -556,10 +556,29 @@ class UnflattenSequenced(MapTransform):
     
 
 class CreatePreviousMaskd(MapTransform):
+    def __init__(self, keys, allow_missing_keys=False):
+        super().__init__(keys, allow_missing_keys)
+
     def __call__(self, data):
         d = dict(data)
 
-        if d["prev_label"] is None:
-            d["prev_label"] = torch.zeros_like(d["label"])
+        for key in self.keys:
+            prev = d[key]
+
+            if prev is None:
+                shape = d["label"].shape
+                d[key] = torch.zeros_like(d["label"])
+
+            elif isinstance(prev, str):
+                loaded = LoadImaged(
+                    keys=[key],
+                    reader="PILReader",
+                    image_only=False
+                )({key: prev})
+
+                d[key] = loaded[key]
+
+            else:
+                d[key] = prev
 
         return d
