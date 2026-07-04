@@ -12,8 +12,9 @@ from monai.transforms.post.array import Activations, AsDiscrete
 from monai.transforms.compose import Compose
 from monai.transforms.post.array import KeepLargestConnectedComponent
 
-from surgical_copilot.bench.perturbation import PerturbationPipelines
-from surgical_copilot.bench.engine.logger_wandb import WandbLogger
+from src.surgical_copilot.bench.perturbation import PerturbationPipelines
+from src.surgical_copilot.bench.engine.logger_wandb import WandbLogger
+from src.surgical_copilot.bench.engine.temporal_mode import TemporalMode
 
 
 class BenchmarkEngine:
@@ -30,6 +31,7 @@ class BenchmarkEngine:
         cfg,
         device,
         fold_idx=0,
+        temporal_mode=TemporalMode.NONE,
         is_temporal=False
     ):
         self.model = model.to(device)
@@ -42,6 +44,7 @@ class BenchmarkEngine:
         self.loss_fn = loss_fn
         self.scaler = scaler
 
+        self.temporal_mode = temporal_mode
         self.is_temporal = is_temporal
 
         self.cfg = cfg
@@ -126,9 +129,6 @@ class BenchmarkEngine:
         self.dice_metric(y_pred=preds, y=labels)
         self.hd95_metric(y_pred=preds, y=labels)
         self.iou(y_pred=preds, y=labels)
-        
-        if hasattr(self, "_update_temporal_metrics"):
-            self._update_temporal_metrics(preds, labels)
 
     def _train(self):
 
@@ -160,7 +160,9 @@ class BenchmarkEngine:
 
         print("\n[*] Evaluation")
         self.model.eval()
-        clean_pipeline  = PerturbationPipelines.get_eval_scenarios()["clean"]
+        mode_str = self.temporal_mode.value
+        is_sequential = True if self.temporal_mode == TemporalMode.LATE_FUSION else False
+        clean_pipeline  = PerturbationPipelines.get_eval_scenarios(mode=mode_str, is_sequential=is_sequential)["clean"]
 
         metrics = {
             "val_loss": 0.0,
@@ -171,8 +173,18 @@ class BenchmarkEngine:
 
         # Warmup GPU
         if self.device.type == "cuda":
-            # Crea un tensore dummy con la forma corretta (B, C, H, W)
-            dummy_input = torch.randn(1, 3, self.cfg.data.img_size[0], self.cfg.data.img_size[1]).to(self.device)
+
+            H, W = self.cfg.data.img_size
+
+            if getattr(self, "temporal_mode", None) == TemporalMode.LATE_FUSION:
+                T = self.cfg.data.sequence_length
+                dummy_input = torch.randn(1, T, 3, H, W, device=self.device)
+            else:
+                dummy_input = torch.randn(1, 3, H, W, device=self.device)
+
+            with torch.cuda.amp.autocast(enabled=self.scaler is not None):
+                for _ in range(5):
+                    _ = self.model(dummy_input)
             
             # Scalda solo il modello, non il metodo _prepare_inputs
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
@@ -243,7 +255,10 @@ class BenchmarkEngine:
 
         self.model.eval()
 
-        eval_scenarios = PerturbationPipelines.get_eval_scenarios()
+        mode_str = self.temporal_mode.value
+        is_sequential = True if self.temporal_mode == TemporalMode.LATE_FUSION else False
+
+        eval_scenarios = PerturbationPipelines.get_eval_scenarios(mode=mode_str, is_sequential=is_sequential)
 
         metrics = {
             "baseline": {"dice": 0.0, "hd95": 0.0, "iou": 0.0},

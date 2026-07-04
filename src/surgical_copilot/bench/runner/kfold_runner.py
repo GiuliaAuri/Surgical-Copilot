@@ -6,13 +6,13 @@ from hydra.utils import instantiate
 
 from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
-from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
-from surgical_copilot.bench.engine.temporal_engine import TemporalBenchmarkEngine
-from surgical_copilot.bench.engine.temporal_mode import TemporalMode
-from surgical_copilot.HemoDataset import HemosetDataSet, HemosetDataSequences, HemosetEarlyFusion
-from surgical_copilot.bench.perturbation import PerturbationPipelines
-from surgical_copilot.transfer_weights import load_or_create_temporal_weights
-from surgical_copilot.utils.repro import set_seed
+from src.surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
+from src.surgical_copilot.bench.engine.temporal_engine import TemporalBenchmarkEngine
+from src.surgical_copilot.bench.engine.temporal_mode import TemporalMode
+from src.surgical_copilot.HemoDataset import HemosetDataSet, HemosetDataSequences, HemosetEarlyFusion
+from src.surgical_copilot.bench.perturbation import PerturbationPipelines
+from src.surgical_copilot.transfer_weights import load_or_create_temporal_weights
+from src.surgical_copilot.utils.repro import set_seed
 
 
 class KFoldRunner:
@@ -117,12 +117,14 @@ class KFoldRunner:
 
         batch_size = self.cfg.trainer.trainer.batch_size
 
+        train_transforms = PerturbationPipelines.get_train_pipeline(mode=self.temporal_mode.value)
+
         train_loader, val_loader, test_loader = dataset.get_loaders(
             fold_idx=fold,
             n_splits=self.cfg.data.n_folds,
             batch_size=batch_size,
             num_workers=self.cfg.trainer.trainer.num_workers,
-            train_transforms=PerturbationPipelines.get_train_pipeline(),
+            train_transforms=train_transforms,
         )
 
         optimizer = instantiate(self.cfg.trainer.optimizer, params=model.parameters())
@@ -145,11 +147,12 @@ class KFoldRunner:
             "scaler": scaler,
             "cfg": self.cfg,
             "device": self.device,
-            "fold_idx": fold
+            "fold_idx": fold,
+            "temporal_mode": self.temporal_mode
         }
 
-        if self.temporal_mode != TemporalMode.NONE:
-            engine_kwargs["temporal_mode"] = self.temporal_mode
+        #if self.temporal_mode != TemporalMode.NONE:
+        #    engine_kwargs["temporal_mode"] = self.temporal_mode
 
         engine = engine_cls(**engine_kwargs)
 

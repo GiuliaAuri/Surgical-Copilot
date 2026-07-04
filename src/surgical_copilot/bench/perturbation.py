@@ -12,59 +12,51 @@ from monai.transforms import (
     RandFlipd,
     Rand2DElasticd,
     Rand2DElasticd,
-    MapTransform,
-    Lambda,
-    Randomizable
+    MapTransform
 )
 
 
-class TemporalConsistencyTransform(MapTransform):
+class VideoConsistentWrapper(MapTransform):
 
-    def __init__(self, transform, keys):
-        self.transform = transform
-        super().__init__(keys)
+    def __init__(self, spatial_transform, frame_transform, keys=None):
+        super().__init__(keys or ["image", "label"])
+        self.spatial_transform = spatial_transform
+        self.frame_transform = frame_transform
 
     def __call__(self, data):
-
         d = dict(data)
 
-        images = d["image"]
-        masks = d["label"]
+        images = d["image"]   # (B, T, C, H, W)
+        masks  = d["label"]
 
         B, T = images.shape[:2]
 
-        # =========================
-        # 1. FLATTEN
-        # =========================
-        images_flat = images.reshape(B * T, *images.shape[2:])
-        masks_flat = masks.reshape(B * T, *masks.shape[2:])
+        out_images, out_masks = [], []
 
-        out_images = []
-        out_masks = []
+        for b in range(B):
 
-        # =========================
-        # 2. APPLY TRANSFORM
-        # =========================
-        for i in range(B * T):
+            video = {"image": images[b], "label": masks[b]}
 
-            sample = {
-                "image": images_flat[i],
-                "label": masks_flat[i]
-            }
+            seed = torch.randint(0, 1_000_000, (1,)).item()
+            torch.manual_seed(seed)
 
-            sample = self.transform(sample)
+            video = self.spatial_transform(video)
 
-            out_images.append(sample["image"])
-            out_masks.append(sample["label"])
+            imgs, msks = video["image"], video["label"]
 
-        out_images = torch.stack(out_images)
-        out_masks = torch.stack(out_masks)
+            frames_img, frames_msk = [], []
 
-        # =========================
-        # 3. RE-SHAPE BACK
-        # =========================
-        d["image"] = out_images.view(B, T, *out_images.shape[1:])
-        d["label"] = out_masks.view(B, T, *out_masks.shape[1:])
+            for t in range(T):
+                frame = {"image": imgs[t], "label": msks[t]}
+                frame = self.frame_transform(frame)
+                frames_img.append(frame["image"])
+                frames_msk.append(frame["label"])
+
+            out_images.append(torch.stack(frames_img))
+            out_masks.append(torch.stack(frames_msk))
+
+        d["image"] = torch.stack(out_images)
+        d["label"] = torch.stack(out_masks)
 
         return d
 
@@ -173,7 +165,7 @@ class PerturbationFactory:
 class PerturbationPipelines:
 
     KEY_MAPS = {
-        "standard": ["image", "label"],
+        "none": ["image", "label"],
         "early_fusion": ["image", "label", "prev_label"],
         "late_fusion": ["image", "label"]
     }
@@ -205,46 +197,54 @@ class PerturbationPipelines:
         ])
 
     @staticmethod
-    def get_eval_scenarios(mode="standard", is_sequential=False):
+    def get_eval_scenarios(mode="none", is_sequential=False):
 
         dynamic_keys = PerturbationPipelines.KEY_MAPS[mode]
 
-        wrap = (
-            lambda t: TemporalConsistencyTransform(transform=t, keys=dynamic_keys)) if is_sequential else (lambda t: t)
-
-        return {
+        base_pipeline = {
             "clean": Compose([]),
 
             "noise_only": Compose([
-                wrap(PerturbationFactory.gaussian_noise(p=1.0, std=0.2))
+                PerturbationFactory.gaussian_noise(p=1.0, std=0.2)
             ]),
 
             "blur_only": Compose([
-                wrap(PerturbationFactory.gaussian_blur(p=1.0))
+                PerturbationFactory.gaussian_blur(p=1.0)
             ]),
 
             "intensity_shift_only": Compose([
-                wrap(PerturbationFactory.intensity_shift(p=1.0, offset=0.2))
+                PerturbationFactory.intensity_shift(p=1.0, offset=0.2)
             ]),
 
             "smoke_only": Compose([
-                wrap(PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4)))
+                PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4))
             ]),
 
             "contrast_only": Compose([
-                wrap(PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0)))
+                PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0))
             ]),
 
             "specular_only": Compose([
-                wrap(PerturbationFactory.specular(p=1.0, intensity=0.15))
+                PerturbationFactory.specular(p=1.0, intensity=0.15)
             ]),
 
             "chirurgical_worst_case": Compose([
-                wrap(PerturbationFactory.gaussian_noise(p=1.0, std=0.2)),
-                wrap(PerturbationFactory.gaussian_blur(p=1.0)),
-                wrap(PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0))),
-                wrap(PerturbationFactory.specular(p=1.0, intensity=0.15)),
-                wrap(PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4))),
-                wrap(PerturbationFactory.intensity_shift(p=1.0, offset=0.2))
+                PerturbationFactory.gaussian_noise(p=1.0, std=0.2),
+                PerturbationFactory.gaussian_blur(p=1.0),
+                PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0)),
+                PerturbationFactory.specular(p=1.0, intensity=0.15),
+                PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4)),
+                PerturbationFactory.intensity_shift(p=1.0, offset=0.2)
             ]),
+        }
+
+        if not is_sequential:
+            return base_pipeline
+
+        return {
+            k: VideoConsistentWrapper(
+                spatial_transform=v,
+                frame_transform=lambda x: x,
+            )
+            for k, v in base_pipeline.items()
         }
