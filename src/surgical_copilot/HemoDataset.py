@@ -206,17 +206,19 @@ class HemosetEarlyFusion(HemosetDataSet):
                     {
                         "image": current["image"],
                         "label": current["label"],
-                        "prev_label": str(previous["label"]) if previous else str(current["label"]),
-                        "is_first_frame": i == 0,
+                        "prev_label":  None if previous is None else previous["label"],
+                        "is_first_frame": previous is None,
                     }
                 )
                 
         self.base_transforms = Compose([
-            LoadImaged(keys=["image", "label", "prev_label"], reader="PILReader"),
 
-            EnsureChannelFirstd(keys=["image", "label", "prev_label"]),
+            LoadImaged(keys=["image", "label"], reader="PILReader"),
 
             CreatePreviousMaskd(keys=["prev_label"]),
+
+
+            EnsureChannelFirstd(keys=["image", "label", "prev_label"]),
 
             ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
 
@@ -558,6 +560,6 @@ class CreatePreviousMaskd(MapTransform):
         d = dict(data)
 
         if d["prev_label"] is None:
-            d["prev_label"] = np.zeros_like(d["current_label"])
+            d["prev_label"] = torch.zeros_like(d["label"])
 
         return d
