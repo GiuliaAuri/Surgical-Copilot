@@ -89,13 +89,13 @@ unet_resnet18_early_fusion_warmup_off:
     in_channels: 4 # 3 RGB + 1 Maschera
     classes: 1
 
-    temporal_setting:
-      temporal_mode: "early_fusion"
-      temporal_target_layer: "model.encoder.conv1.weight" # Copia i pesi da 3 a 4 canali
+  temporal_setting:
+    temporal_mode: "early_fusion"
+    temporal_target_layer: "model.encoder.conv1.weight" # Copia i pesi da 3 a 4 canali
 
-    initialization:
-      warmup_epochs: 0
-      freeze_backbone: True
+  initialization:
+    warmup_epochs: 0
+    freeze_backbone: True
 
 ## LATE FUSION
 
@@ -255,7 +255,7 @@ yolo_late_fusion_gru:
     num_classes: 1
     num_masks: 32
     recurrent_type: "gru"
-    recurrent_layers=1,
+    recurrent_layers: 1
     freeze_backbone: True
     warmup_epochs: 5
     pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
