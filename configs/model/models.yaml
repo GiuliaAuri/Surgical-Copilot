@@ -255,7 +255,7 @@ yolo_late_fusion_gru:
     num_classes: 1
     num_masks: 32
     recurrent_type: "gru"
-    recurrent_layers=1,
+    recurrent_layers: 1
     freeze_backbone: True
     warmup_epochs: 5
     pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
