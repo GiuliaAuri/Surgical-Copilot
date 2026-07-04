@@ -89,13 +89,13 @@ unet_resnet18_early_fusion_warmup_off:
     in_channels: 4 # 3 RGB + 1 Maschera
     classes: 1
 
-    temporal_setting:
-      temporal_mode: "early_fusion"
-      temporal_target_layer: "model.encoder.conv1.weight" # Copia i pesi da 3 a 4 canali
+  temporal_setting:
+    temporal_mode: "early_fusion"
+    temporal_target_layer: "model.encoder.conv1.weight" # Copia i pesi da 3 a 4 canali
 
-    initialization:
-      warmup_epochs: 0
-      freeze_backbone: True
+  initialization:
+    warmup_epochs: 0
+    freeze_backbone: True
 
 ## LATE FUSION
 
@@ -225,8 +225,8 @@ yolo_early_fusion_warmup_on:
     num_classes: 1
     num_masks: 32
 
-  temporal_mode:
-    temporal_setting: "early_fusion"
+  temporal_setting:
+    temporal_mode: "early_fusion"
     temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
     warmup_epochs: 5
 
@@ -237,8 +237,8 @@ yolo_early_fusion_warmup_off:
     num_classes: 1
     num_masks: 32
 
-  temporal_mode:
-    temporal_setting: "early_fusion"
+  temporal_setting:
+    temporal_mode: "early_fusion"
     temporal_target_layer: none
     warmup_epochs: 0
 
