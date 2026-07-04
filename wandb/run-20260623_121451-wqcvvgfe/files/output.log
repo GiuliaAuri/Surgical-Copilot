@@ -1,7 +1,0 @@
-[*] Fold info
-Train pigs: ['pig11', 'pig4', 'pig2', 'pig1', 'pig3', 'pig6']
-Val pigs:   ['pig9', 'pig10']
-Test pigs:  ['pig7', 'pig5']
-[*] Samples train=444 val=323 test=195
-Loading dataset: 100%|██████████| 444/444 [00:00<00:00, 1053320.69it/s]
-

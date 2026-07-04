@@ -3,4 +3,4 @@ cache_rate: 1.0
 img_size: [640, 480]
 n_folds: 5
 sequence_length: 5
-overlapping: 0.75
+overlapping: 0

@@ -1,6 +1,0 @@
-- device=cpu
-- logging.wandb_enabled=false
-- trainer.trainer.max_epochs=1
-- trainer.trainer.batch_size=1
-- trainer.trainer.num_workers=0
-- trainer.scaler=null
