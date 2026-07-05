@@ -1,18 +1,44 @@
 import torch
 import numpy as np
 
-from surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
-from surgical_copilot.bench.engine.temporal_mode import TemporalMode
-from surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
-from surgical_copilot.bench.metrics.temporal_metrics.inter_frame import InterFrameTemporalMetric
-
+from src.surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
+from src.surgical_copilot.bench.engine.temporal_mode import TemporalMode
+from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
+from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_iou import TemporalIoU
 
 class TemporalBenchmarkEngine(BenchmarkEngine):
 
-    def __init__(self, *args, temporal_mode=TemporalMode.EARLY_FUSION, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        model,
+        train_loader,
+        val_loader,
+        test_loader,
+        optimizer,
+        scheduler,
+        loss_fn,
+        scaler,
+        cfg,
+        device,
+        fold_idx=0,
+        temporal_mode=TemporalMode.EARLY_FUSION
+    ):
 
-        assert temporal_mode!=TemporalMode.NONE, "TemporalBenchmarkEngine should not be used with temporal_mode=TemporalMode.NONE. For spatial modes, use the appropriate engine."
+        super().__init__(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            test_loader=test_loader,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            loss_fn=loss_fn,
+            scaler=scaler,
+            cfg=cfg,
+            device=device,
+            fold_idx=fold_idx,
+            temporal_mode=temporal_mode
+        )
+
 
         if isinstance(temporal_mode, str):
             temporal_mode = TemporalMode(temporal_mode)
@@ -23,34 +49,23 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self.recurrent_state = None
         self.mask_prev = None
         self._current_patient = None
+        self.last_x = None  # Store the last input for temporal metrics
 
         self.temporal_metrics = {
             "consistency": TemporalConsistencyMetric(device=self.device),
-            "interframe": InterFrameTemporalMetric()
+            "temporal_iou": TemporalIoU(
+                    threshold=0.5,
+                    from_logits=False,   
+                    eps=1e-6
+                )
         }
-
-    def _check_new_video(self, batch):
-
-        patient = batch["patient_id"]
-
-        if isinstance(patient, (list, tuple)):
-            patient = patient[0]
-
-        if isinstance(patient, torch.Tensor):
-            patient = patient.item()
-
-        if not hasattr(self, "_current_patient"):
-            self._current_patient = patient
-            self._reset_temporal_state()
-            return
-
-        if patient != self._current_patient:
-            self._current_patient = patient
-            self._reset_temporal_state()
     
     def _reset_temporal_state(self):
         self.recurrent_state = None
         self.mask_prev = None
+
+        self.temporal_metrics["consistency"].reset()
+        self.temporal_metrics["temporal_iou"].reset_sequence()
 
     def _reset_temporal_metrics(self):
         
@@ -63,7 +78,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
     def _prepare_inputs(self, batch):
 
-        self._check_new_video(batch)
+        #self._check_new_video(batch)
 
         # EARLY_FUSION mode: we expect the input to be a single frame,
         # and we concatenate the previous mask (or a zero mask if it's the first frame) 
@@ -71,15 +86,13 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
         if self.temporal_mode == TemporalMode.EARLY_FUSION:
 
-            #is_first = batch["is_first_frame"]
-
-            #if isinstance(is_first, torch.Tensor):
-            #    is_first = bool(is_first[0].item())
-
-            #if is_first:
-            #    self._reset_temporal_state()
+            is_first = batch["is_first_frame"]
+            if isinstance(is_first, torch.Tensor):
+                is_first = bool(is_first[0].item())
+            if is_first:
+                self._reset_temporal_state()
                 
-            image = batch["current_image"].to(self.device)
+            image = batch["image"].to(self.device)
 
             if self.model.training:
                 prev = batch["prev_label"].to(self.device)
@@ -93,7 +106,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
                 else:
                     prev = self.mask_prev
 
-            label = batch["current_label"].to(self.device)
+            label = batch["label"].to(self.device)
 
             x = torch.cat(
                 (image, prev),
@@ -140,10 +153,6 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
     def _late_fusion_forward(self, x, y):
 
         assert x.ndim == 5, "Expected input x to be a 5D tensor of shape (B, T, C, H, W)"
-
-    def _forward_step(self, x, y=None):
-        if y is None: 
-            y = self.current_y
     
         B, T, C, H, W = x.shape
         total_loss = 0.0
@@ -214,9 +223,8 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
             super()._update_metrics(preds, labels)
 
-            self.temporal_metrics["consistency"](preds, labels)
-            self.temporal_metrics["interframe"](preds)
-
+            self.temporal_metrics["consistency"](preds, labels, self.last_x)
+            self.temporal_metrics["temporal_iou"](preds)
             return
 
         B, T = preds.shape[:2]
@@ -225,11 +233,6 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         labels_flat = labels.reshape(B * T, *labels.shape[2:])
 
         super()._update_metrics(preds_flat, labels_flat)
-
-    def _update_temporal_metrics(self, preds, labels):
-        if hasattr(self, 'last_x'):
-            self.temporal_metrics["consistency"](preds, labels, self.last_x)
-            self.temporal_metrics["interframe"](preds)
 
     def _train(self):
         self._reset_all()
@@ -242,7 +245,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         
         temp = {
             **self.temporal_metrics["consistency"].aggregate(),
-            **self.temporal_metrics["interframe"].aggregate()
+            **self.temporal_metrics["temporal_iou"].aggregate()
         }
         metrics["baseline"].update(temp)
         
@@ -254,7 +257,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         
         temp = {
             **self.temporal_metrics["consistency"].aggregate(),
-            **self.temporal_metrics["interframe"].aggregate()
+            **self.temporal_metrics["temporal_iou"].aggregate()
         }
         metrics["baseline"].update(temp)
         
