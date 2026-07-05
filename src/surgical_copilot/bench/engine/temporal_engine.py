@@ -92,7 +92,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             if is_first:
                 self._reset_temporal_state()
                 
-            image = batch["image"].to(self.device)
+            image = batch["current_image"].to(self.device)
 
             if self.model.training:
                 prev = batch["prev_label"].to(self.device)
@@ -106,7 +106,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
                 else:
                     prev = self.mask_prev
 
-            label = batch["label"].to(self.device)
+            label = batch["current_label"].to(self.device)
 
             x = torch.cat(
                 (image, prev),
@@ -121,8 +121,8 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         # LATE_FUSION mode: we expect the input to be a sequence of frames, so we don't concatenate the previous mask, 
         # but we still need to reset the temporal state for each new batch.
 
-        images = batch["image"].to(self.device)  # shape: (B, T, C, H, W)
-        labels = batch["label"].to(self.device)  # shape: (B, T, 1, H, W)
+        images = batch["current_image"].to(self.device)  # shape: (B, T, C, H, W)
+        labels = batch["current_label"].to(self.device)  # shape: (B, T, 1, H, W)
 
         #self._reset_temporal_state()
 

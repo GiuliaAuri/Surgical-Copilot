@@ -77,8 +77,8 @@ class BenchmarkEngine:
         self.logger._print_model_info(model, device)
 
     def _prepare_inputs(self, batch):
-        x = batch["image"].to(self.device)
-        y = batch["label"].to(self.device)
+        x = batch["current_image"].to(self.device)
+        y = batch["current_label"].to(self.device)
         return x, y
 
     def _forward_step(self, x, y):
