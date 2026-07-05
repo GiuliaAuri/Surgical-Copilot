@@ -20,6 +20,7 @@ from monai.transforms import (
     NormalizeIntensityd,
     EnsureTyped, 
     MapTransform,
+    Lambdad
 )
 
 class HemosetDataSet:
@@ -206,34 +207,34 @@ class HemosetEarlyFusion(HemosetDataSet):
 
                 self.patient_samples[patient].append(
                     {
-                        "image": current["image"],
-                        "label": current["label"],
+                        "current_image": current["image"],
+                        "current_label": current["label"],
                         "prev_label": None if previous is None else previous["label"],
                         "is_first_frame": previous is None,
                         "patient_id": patient,  
                     }
                 )
         self.base_transforms = Compose([
-            LoadImaged(keys=["image", "label"], reader="PILReader"),
+            LoadImaged(keys=["current_image", "current_label"], reader="PILReader"),
+            CreatePreviousMaskd(keys=["prev_label"]),
             
-            EnsureChannelFirstd(keys=["image", "label"]), 
+            EnsureChannelFirstd(keys=["current_image", "current_label", "prev_label"], channel_dim="no_channel"),
             
-            CreatePreviousMaskd(keys=["prev_label"]), 
-            
-            EnsureChannelFirstd(keys=["prev_label"], channel_dim="no_channel"),
-            
-            ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
-            AsDiscreted(keys=["label", "prev_label"], threshold=0.5),
+            Lambdad(keys=["current_image", "current_label", "prev_label"], func=lambda x: x.squeeze(0)),
             
             Resized(
-                keys=["image", "label", "prev_label"],
-                spatial_size=(self.image_size[0], self.image_size[1]), 
+                keys=["current_image", "current_label", "prev_label"],
+                spatial_size=self.image_size,
                 mode=("bilinear", "nearest", "nearest")
             ),
             
+            Lambdad(keys=["current_image", "current_label", "prev_label"], func=lambda x: np.expand_dims(x, axis=0)),
             
-            EnsureTyped(keys=["image", "label", "prev_label"]),
-            ToTensord(keys=["image", "label", "prev_label"]),
+            ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
+            AsDiscreted(keys=["current_label", "prev_label"], threshold=0.5),
+            
+            EnsureTyped(keys=["current_image", "current_label", "prev_label"]),
+            ToTensord(keys=["current_image", "current_label", "prev_label"]),
         ])        
         
 
@@ -560,8 +561,8 @@ class CreatePreviousMaskd(MapTransform):
             prev = d[key]
 
             if prev is None:
-                shape = d["label"].shape
-                d[key] = torch.zeros_like(d["label"])
+                shape = d["current_label"].shape
+                d[key] = torch.zeros_like(d["current_label"])
 
             elif isinstance(prev, str):
                 loaded = LoadImaged(
