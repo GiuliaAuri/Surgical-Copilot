@@ -427,7 +427,8 @@ class HemosetDataSequences(HemosetDataSet):
             f"test={len(test_files)}"
         )
 
-        train_compose = (Compose([self.base_transforms,train_transforms]) if train_transforms  else self.base_transforms)
+        train_transforms_video = VideoConsistentWrapper(transforms=train_transforms, keys=["image", "label"], appearance_mode="shared")
+        train_compose = (Compose([self.base_transforms,train_transforms_video]) if train_transforms  else self.base_transforms)
 
         train_ds = CacheDataset(train_files, transform=train_compose, cache_rate=cache_rate)
         val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
@@ -452,7 +453,7 @@ class HemosetDataSequences(HemosetDataSet):
 
             # sequence are contiguous and partially overlapped
             # thanks to the stride frame in different sequences are correlated
-            stride = int(seq_len * self.overlapping) if self.overlapping > 0 else seq_len
+            stride = int(seq_len * (1 - self.overlapping)) if self.overlapping > 0 else seq_len
             
             # Sliding window with stride
             for i in range(0, len(patient_frames) - seq_len + 1, stride):
@@ -507,7 +508,7 @@ class HemosetDataSequences(HemosetDataSet):
 from monai.transforms import MapTransform, Compose
 
 class SequenceTransform(MapTransform):
-
+    
     def __init__(self, frame_transform):
         self.frame_transform = frame_transform
 
@@ -556,10 +557,83 @@ class UnflattenSequenced(MapTransform):
     
 
 class CreatePreviousMaskd(MapTransform):
+    def __init__(self, keys, allow_missing_keys=False):
+        super().__init__(keys, allow_missing_keys)
+
     def __call__(self, data):
         d = dict(data)
 
-        if d["prev_label"] is None:
-            d["prev_label"] = torch.zeros_like(d["label"])
+        for key in self.keys:
+            prev = d[key]
+
+            if prev is None:
+                shape = d["label"].shape
+                d[key] = torch.zeros_like(d["label"])
+
+            elif isinstance(prev, str):
+                loaded = LoadImaged(
+                    keys=[key],
+                    reader="PILReader",
+                    image_only=False
+                )({key: prev})
+
+                d[key] = loaded[key]
+
+            else:
+                d[key] = prev
+
+        return d
+
+from monai.transforms import (
+    RandSpatialCropd,
+    RandCropByPosNegLabeld,
+    RandFlipd,
+    RandRotated,
+    Rand2DElasticd
+)
+
+
+class VideoConsistentWrapper(MapTransform):
+
+    def __init__(self, transforms, keys=["image", "label"], appearance_mode="shared"):
+        super().__init__(keys)
+        self.transforms = Compose(transforms)
+        self.appearance_mode = appearance_mode
+
+    def __call__(self, data):
+
+        d = dict(data)
+
+        images = torch.as_tensor(d["image"])
+        masks  = torch.as_tensor(d["label"])
+
+        if images.ndim != 4:
+            raise ValueError(f"Expected (T,C,H,W), got {images.shape}")
+
+        T = images.shape[0]
+
+        seed = torch.randint(0, 1_000_000, (1,)).item()
+
+        out_img, out_msk = [], []
+
+        for t in range(T):
+
+            if self.appearance_mode == "shared":
+                torch.manual_seed(seed)
+            else:
+                torch.manual_seed(torch.randint(0, 1_000_000, (1,)).item())
+
+            frame = {
+                "image": images[t],
+                "label": masks[t]
+            }
+
+            frame = self.transforms(frame)
+
+            out_img.append(frame["image"])
+            out_msk.append(frame["label"])
+
+        d["image"] = torch.stack(out_img)
+        d["label"] = torch.stack(out_msk)
 
         return d

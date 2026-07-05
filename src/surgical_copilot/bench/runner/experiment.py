@@ -2,7 +2,7 @@ import hydra
 import pandas as pd
 from omegaconf import DictConfig
 
-from surgical_copilot.bench.runner.kfold_runner import KFoldRunner
+from src.surgical_copilot.bench.runner.kfold_runner import KFoldRunner
 
 @hydra.main(version_base=None, config_path="../../../../configs", config_name="config")
 def main(cfg: DictConfig):
