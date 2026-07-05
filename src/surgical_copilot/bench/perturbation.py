@@ -19,47 +19,52 @@ from monai.transforms import (
 class VideoConsistentWrapper(MapTransform):
 
     def __init__(self, spatial_transform, frame_transform, keys=None):
-        super().__init__(keys or ["image", "label"])
+        # Imposta le chiavi di default sui nuovi nomi
+        super().__init__(keys or ["current_image", "current_label"])
         self.spatial_transform = spatial_transform
         self.frame_transform = frame_transform
 
     def __call__(self, data):
         d = dict(data)
 
-        images = d["image"]   # (B, T, C, H, W)
-        masks  = d["label"]
+        # Usa le chiavi corrette (o quelle passate nel costruttore)
+        img_key = self.keys[0] 
+        lbl_key = self.keys[1]
+
+        images = d[img_key]   # (B, T, C, H, W)
+        masks  = d[lbl_key]
 
         B, T = images.shape[:2]
 
         out_images, out_masks = [], []
 
         for b in range(B):
-
-            video = {"image": images[b], "label": masks[b]}
+            # Crea il dizionario temporaneo usando le chiavi corrette
+            video = {"current_image": images[b], "current_label": masks[b]}
 
             seed = torch.randint(0, 1_000_000, (1,)).item()
             torch.manual_seed(seed)
 
             video = self.spatial_transform(video)
 
-            imgs, msks = video["image"], video["label"]
+            imgs, msks = video["current_image"], video["current_label"]
 
             frames_img, frames_msk = [], []
 
             for t in range(T):
-                frame = {"image": imgs[t], "label": msks[t]}
+                frame = {"current_image": imgs[t], "current_label": msks[t]}
                 frame = self.frame_transform(frame)
-                frames_img.append(frame["image"])
-                frames_msk.append(frame["label"])
+                frames_img.append(frame["current_image"])
+                frames_msk.append(frame["current_label"])
 
             out_images.append(torch.stack(frames_img))
             out_masks.append(torch.stack(frames_msk))
 
-        d["image"] = torch.stack(out_images)
-        d["label"] = torch.stack(out_masks)
+        # Riassegna i risultati alle chiavi corrette
+        d[img_key] = torch.stack(out_images)
+        d[lbl_key] = torch.stack(out_masks)
 
         return d
-
 
 class RandSpecularReflectiond(MapTransform):
     
@@ -135,39 +140,39 @@ class PerturbationFactory:
     @staticmethod
     def gaussian_noise(p=0.3, std=0.1):
         """Simulate sensor noise by adding Gaussian noise with a specified standard deviation."""
-        return RandGaussianNoised(keys="image", prob=p, mean=0.0, std=std)
+        return RandGaussianNoised(keys="current_image", prob=p, mean=0.0, std=std)
 
     @staticmethod
     def gaussian_blur(p=0.3, sigma=(0.5, 1.5)):
         """Simulate motion blur or defocus by applying a Gaussian blur with a randomly selected sigma value."""
-        return RandGaussianSmoothd(keys="image", prob=p, sigma_x=sigma, sigma_y=sigma)
+        return RandGaussianSmoothd(keys="current_image", prob=p, sigma_x=sigma, sigma_y=sigma)
 
     @staticmethod
     def contrast(p=0.3, gamma=(0.7, 1.5)):
         """Simulate changes in lighting conditions by randomly adjusting the contrast of the image."""
-        return RandAdjustContrastd(keys="image", prob=p, gamma=gamma)
+        return RandAdjustContrastd(keys="current_image", prob=p, gamma=gamma)
 
     @staticmethod
     def intensity_shift(p=0.2, offset=0.1):
         """Simulate changes in lighting conditions by randomly shifting the intensity of the image."""
-        return RandShiftIntensityd(keys="image", prob=p, offsets=offset)
+        return RandShiftIntensityd(keys="current_image", prob=p, offsets=offset)
 
     @staticmethod
     def surgical_smoke(p=0.2, intensity=(0.1, 0.3)):
         """Simulate surgical smoke by overlaying a semi-transparent noise pattern that mimics the appearance of smoke."""
-        return RandSurgicalSmoked(keys="image", prob=p, intensity_range=intensity)
+        return RandSurgicalSmoked(keys="current_image", prob=p, intensity_range=intensity)
 
     @staticmethod
     def specular(p=0.2, intensity=0.1):
         """Simulate specular reflections by adding bright, localized highlights that mimic the appearance of light reflecting off wet or shiny surfaces."""
-        return RandSpecularReflectiond(keys="image", prob=p, intensity=intensity)
+        return RandSpecularReflectiond(keys="current_image", prob=p, intensity=intensity)
 
 class PerturbationPipelines:
 
     KEY_MAPS = {
-        "none": ["image", "label"],
-        "early_fusion": ["image", "label", "prev_label"],
-        "late_fusion": ["image", "label"]
+        "none": ["current_image", "current_label"],
+        "early_fusion": ["current_image", "current_label", "prev_label"],
+        "late_fusion": ["current_image", "current_label"]
     }
 
     @staticmethod
@@ -180,13 +185,13 @@ class PerturbationPipelines:
             RandSpatialCropd(keys=dynamic_keys, roi_size=(320, 320), random_size=False), 
             RandCropByPosNegLabeld(
                 keys=dynamic_keys,
-                label_key='label',
+                label_key='current_label',
                 spatial_size=(320, 320),
                 pos=2, # weight per patch with target (emorragic region)
                 neg=1, # weight per patch without target (background)
                 num_samples=2
             ),
-            RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)),
+            RandAdjustContrastd(keys=["current_image"], prob=0.5, gamma=(0.5, 1.5)),
 #
             # Geometry trasformation
             RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=0),

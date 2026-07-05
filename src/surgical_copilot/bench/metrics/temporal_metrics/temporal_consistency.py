@@ -55,9 +55,6 @@ class TemporalConsistencyMetric:
 
             # 5. Finalmente, "deforma" la maschera passata
             warped_prev_pred = F.grid_sample(self.prev_pred.float(), warped_grid, align_corners=True)
-            warped_prev_pred = (warped_prev_pred > 0.5).float() # Risoglia
-
-            warped_prev_pred = F.grid_sample(self.prev_pred.float(), warped_grid, align_corners=True)
             warped_prev_pred = (warped_prev_pred > 0.5).float() 
 
             # 6. Calcolo IoU tra la predizione deformata e quella attuale

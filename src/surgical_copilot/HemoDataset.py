@@ -19,8 +19,7 @@ from monai.transforms import (
     ToTensord,
     NormalizeIntensityd,
     EnsureTyped, 
-    MapTransform,
-    Lambdad
+    MapTransform
 )
 
 class HemosetDataSet:
@@ -55,8 +54,8 @@ class HemosetDataSet:
                 continue
 
             self.patient_data[patient_id].append({
-                "image": str(img_path),
-                "label": str(final_mask_path)
+                "current_image": str(img_path),
+                "current_label": str(final_mask_path)
             })
 
         if not self.patient_data:
@@ -66,20 +65,20 @@ class HemosetDataSet:
         print(f"[*] Totale frame validi: {sum(len(frames) for frames in self.patient_data.values())}")
         
         transforms_list = [
-            LoadImaged(keys=["image", "label"], reader="PILReader"),
+            LoadImaged(keys=["current_image", "current_label"], reader="PILReader"),
             
-            EnsureChannelFirstd(keys=["image"]),
-            EnsureChannelFirstd(keys=["label"]),
+            EnsureChannelFirstd(keys=["current_image"]),
+            EnsureChannelFirstd(keys=["current_label"]),
             
-            ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
-            AsDiscreted(keys=["label"], threshold=0.5),
+            ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
+            AsDiscreted(keys=["current_label"], threshold=0.5),
         ]
 
         if use_imagenet_norm:
             print("[*] Normalizzazione ImageNet ATTIVATA.")
             transforms_list.append(
                 NormalizeIntensityd(
-                    keys=["image"], 
+                    keys=["current_image"], 
                     subtrahend=[0.485, 0.456, 0.406], 
                     divisor=[0.229, 0.224, 0.225], 
                     channel_wise=True
@@ -87,8 +86,8 @@ class HemosetDataSet:
             )
                
         transforms_list.extend([    
-            Resized(keys=["image", "label"], spatial_size=self.image_size, mode=("bilinear", "nearest")),
-            ToTensord(keys=["image", "label"], dtype=torch.float32),
+            Resized(keys=["current_image", "current_label"], spatial_size=self.image_size, mode=("bilinear", "nearest")),
+            ToTensord(keys=["current_image", "current_label"], dtype=torch.float32),
         ])
         self.base_transforms = Compose(transforms_list)
         
@@ -351,11 +350,11 @@ class HemosetDataSequences(HemosetDataSet):
         self.overlapping = overlapping
 
         self.frame_transforms = Compose([
-            LoadImaged(keys=["image", "label"], reader="PILReader"),
-            EnsureChannelFirstd(keys=["image", "label"]),
+            LoadImaged(keys=["current_image", "current_label"], reader="PILReader"),
+            EnsureChannelFirstd(keys=["current_image", "current_label"]),
 
             ScaleIntensityRanged(
-                keys=["image"],
+                keys=["current_image"],
                 a_min=0,
                 a_max=255,
                 b_min=0.0,
@@ -363,8 +362,8 @@ class HemosetDataSequences(HemosetDataSet):
                 clip=True
             ),
 
-            AsDiscreted(keys=["label"], threshold=0.5),
-            ToTensord(keys=["image", "label"], dtype=torch.float32),
+            AsDiscreted(keys=["current_label"], threshold=0.5),
+            ToTensord(keys=["current_image", "current_label"], dtype=torch.float32),
         ])
 
         self.base_transforms = Compose([
@@ -422,7 +421,7 @@ class HemosetDataSequences(HemosetDataSet):
             f"test={len(test_files)}"
         )
 
-        train_transforms_video = VideoConsistentWrapper(transforms=train_transforms, keys=["image", "label"], appearance_mode="shared")
+        train_transforms_video = VideoConsistentWrapper(transforms=train_transforms, keys=["current_image", "current_label"], appearance_mode="shared")
         train_compose = (Compose([self.base_transforms,train_transforms_video]) if train_transforms  else self.base_transforms)
 
         train_ds = CacheDataset(train_files, transform=train_compose, cache_rate=cache_rate)
@@ -461,12 +460,12 @@ class HemosetDataSequences(HemosetDataSet):
 
                 window = patient_frames[i : i + seq_len]
 
-                images= [frame["image"] for frame in window]
-                labels= [frame["label"] for frame in window]
+                images= [frame["current_image"] for frame in window]
+                labels= [frame["current_label"] for frame in window]
                 
                 seq_sample = {
-                    "image": images,
-                    "label": labels,
+                    "current_image": images,
+                    "current_label": labels,
                     "sequence_id": f"{p}_{i}",
                     "patient_id": p,
                     "start_idx": i
@@ -512,20 +511,20 @@ class SequenceTransform(MapTransform):
         images = []
         labels = []
 
-        for img_path, lbl_path in zip(data["image"], data["label"]):
+        for img_path, lbl_path in zip(data["current_image"], data["current_label"]):
 
             sample = {
-                "image": img_path,
-                "label": lbl_path,
+                "current_image": img_path,
+                "current_label": lbl_path,
             }
 
             sample = self.frame_transform(sample)
 
-            images.append(sample["image"])
-            labels.append(sample["label"])
+            images.append(sample["current_image"])
+            labels.append(sample["current_label"])
 
-        data["image"] = torch.stack(images)   # (T,C,H,W)
-        data["label"] = torch.stack(labels)   # (T,1,H,W)
+        data["current_image"] = torch.stack(images)   # (T,C,H,W)
+        data["current_label"] = torch.stack(labels)   # (T,1,H,W)
 
         return data
 
@@ -589,7 +588,7 @@ from monai.transforms import (
 
 class VideoConsistentWrapper(MapTransform):
 
-    def __init__(self, transforms, keys=["image", "label"], appearance_mode="shared"):
+    def __init__(self, transforms, keys=["current_image", "current_label"], appearance_mode="shared"):
         super().__init__(keys)
         self.transforms = Compose(transforms)
         self.appearance_mode = appearance_mode
@@ -598,8 +597,8 @@ class VideoConsistentWrapper(MapTransform):
 
         d = dict(data)
 
-        images = torch.as_tensor(d["image"])
-        masks  = torch.as_tensor(d["label"])
+        images = torch.as_tensor(d["current_image"])
+        masks  = torch.as_tensor(d["current_label"])
 
         if images.ndim != 4:
             raise ValueError(f"Expected (T,C,H,W), got {images.shape}")
@@ -618,16 +617,16 @@ class VideoConsistentWrapper(MapTransform):
                 torch.manual_seed(torch.randint(0, 1_000_000, (1,)).item())
 
             frame = {
-                "image": images[t],
-                "label": masks[t]
+                "current_image": images[t],
+                "current_label": masks[t]
             }
 
             frame = self.transforms(frame)
 
-            out_img.append(frame["image"])
-            out_msk.append(frame["label"])
+            out_img.append(frame["current_image"])
+            out_msk.append(frame["current_label"])
 
-        d["image"] = torch.stack(out_img)
-        d["label"] = torch.stack(out_msk)
+        d["current_image"] = torch.stack(out_img)
+        d["current_label"] = torch.stack(out_msk)
 
         return d
