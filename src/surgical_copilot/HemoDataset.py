@@ -17,7 +17,9 @@ from monai.transforms import (
     Resized,
     AsDiscreted,
     ToTensord,
-    NormalizeIntensityd
+    NormalizeIntensityd,
+    EnsureTyped, 
+    MapTransform,
 )
 
 class HemosetDataSet:
@@ -206,43 +208,35 @@ class HemosetEarlyFusion(HemosetDataSet):
                     {
                         "image": current["image"],
                         "label": current["label"],
-                        "prev_label":  None if previous is None else previous["label"],
+                        "prev_label": None if previous is None else previous["label"],
                         "is_first_frame": previous is None,
+                        "patient_id": patient,  
                     }
                 )
-                
         self.base_transforms = Compose([
-
             LoadImaged(keys=["image", "label"], reader="PILReader"),
-
-            CreatePreviousMaskd(keys=["prev_label"]),
-
-
-            EnsureChannelFirstd(keys=["image", "label", "prev_label"]),
-
+            
+            EnsureChannelFirstd(keys=["image", "label"]), 
+            
+            CreatePreviousMaskd(keys=["prev_label"]), 
+            
+            EnsureChannelFirstd(keys=["prev_label"], channel_dim="no_channel"),
+            
             ScaleIntensityRanged(keys=["image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
-
             AsDiscreted(keys=["label", "prev_label"], threshold=0.5),
-
+            
             Resized(
                 keys=["image", "label", "prev_label"],
-                spatial_size=self.image_size,
+                spatial_size=(self.image_size[0], self.image_size[1]), 
                 mode=("bilinear", "nearest", "nearest")
             ),
-
+            
+            
+            EnsureTyped(keys=["image", "label", "prev_label"]),
             ToTensord(keys=["image", "label", "prev_label"]),
-        ])
+        ])        
+        
 
-        #self.base_transforms = Compose([
-        #    
-        #    LoadImaged(keys=["current_image", "current_label", "prev_label"], reader="PILReader"),
-        #    EnsureChannelFirstd(keys=["current_image", "current_label", "prev_label"]),
-        #    CreatePreviousMaskd(keys=["prev_label"]),
-        #    ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),            
-        #    AsDiscreted(keys=["current_label","prev_label"], threshold=0.5),
-        #    Resized(keys=["current_image", "current_label", "prev_label"], spatial_size=self.image_size, mode=("bilinear", "nearest", "nearest")),
-        #    ToTensord(keys=["current_image", "current_label", "prev_label"], dtype=torch.float32),
-        #])
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
@@ -555,7 +549,6 @@ class UnflattenSequenced(MapTransform):
                 
         return d
     
-
 class CreatePreviousMaskd(MapTransform):
     def __init__(self, keys, allow_missing_keys=False):
         super().__init__(keys, allow_missing_keys)
