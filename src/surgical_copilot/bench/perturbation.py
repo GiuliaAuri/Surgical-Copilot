@@ -16,6 +16,94 @@ from monai.transforms import (
 )
 
 
+class VideoRandCropByPosNegLabeld(MapTransform):
+    """
+    Video version of RandCropByPosNegLabeld.
+
+    A crop location is sampled from a single frame (anchor frame) and then
+    applied consistently to every frame of the clip.
+
+    Expected shapes
+    ----------------
+    image : (T, C, H, W)
+    label : (T, 1, H, W)
+    """
+
+    def __init__(
+        self,
+        keys,
+        label_key,
+        spatial_size,
+        pos=1,
+        neg=1,
+        anchor="center",  # "center" | "random"
+        allow_missing_keys=False,
+    ):
+        super().__init__(keys, allow_missing_keys)
+
+        self.label_key = label_key
+        self.crop_h, self.crop_w = spatial_size
+
+        self.pos = pos
+        self.neg = neg
+        self.anchor = anchor
+
+    def _choose_anchor(self, T):
+
+        if self.anchor == "center":
+            return T // 2
+
+        if self.anchor == "random":
+            return random.randint(0, T - 1)
+
+        raise ValueError(f"Unknown anchor {self.anchor}")
+
+    def __call__(self, data):
+
+        d = dict(data)
+
+        label_video = d[self.label_key]
+
+        # (T,1,H,W)
+        T, _, H, W = label_video.shape
+
+        anchor = self._choose_anchor(T)
+
+        mask = label_video[anchor, 0]
+
+        sample_positive = random.random() < self.pos / (self.pos + self.neg)
+
+        if sample_positive and torch.any(mask > 0):
+
+            coords = torch.nonzero(mask > 0)
+
+        else:
+
+            coords = torch.nonzero(mask == 0)
+
+            if len(coords) == 0:
+                coords = torch.nonzero(torch.ones_like(mask))
+
+        idx = random.randint(0, len(coords) - 1)
+
+        cy, cx = coords[idx].tolist()
+
+        y0 = cy - self.crop_h // 2
+        x0 = cx - self.crop_w // 2
+
+        y0 = max(0, min(y0, H - self.crop_h))
+        x0 = max(0, min(x0, W - self.crop_w))
+
+        y1 = y0 + self.crop_h
+        x1 = x0 + self.crop_w
+
+        for key in self.keys:
+
+            d[key] = d[key][..., y0:y1, x0:x1]
+
+        return d
+
+
 class VideoConsistentWrapper(MapTransform):
 
     def __init__(self, spatial_transform, frame_transform, keys=None):
@@ -176,30 +264,57 @@ class PerturbationPipelines:
     }
 
     @staticmethod
-    def get_train_pipeline(mode="standard"):
-
+    def get_train_pipeline(mode="none", is_sequential=False):
+        
         dynamic_keys = PerturbationPipelines.KEY_MAPS[mode]
-
-        # same cofiguaration of Hemoset's authors for training
-        return Compose([
-            RandSpatialCropd(keys=dynamic_keys, roi_size=(320, 320), random_size=False), 
+        
+        spatial = Compose([
+            RandSpatialCropd(
+                keys=dynamic_keys,
+                roi_size=(320, 320),
+                random_size=False
+            ),
             RandCropByPosNegLabeld(
                 keys=dynamic_keys,
-                label_key='current_label',
+                label_key="label",
                 spatial_size=(320, 320),
-                pos=2, # weight per patch with target (emorragic region)
-                neg=1, # weight per patch without target (background)
+                pos=2,
+                neg=1,
                 num_samples=2
             ),
-            RandAdjustContrastd(keys=["current_image"], prob=0.5, gamma=(0.5, 1.5)),
-#
-            # Geometry trasformation
             RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=0),
             RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=1),
-            RandRotated(keys=dynamic_keys, prob=0.3, range_x=0.4, mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)),
-            # Apperance transformation
-            Rand2DElasticd(keys=dynamic_keys, prob=0.2, spacing=(20, 20), magnitude_range=(1, 2), mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)),
+            RandRotated(
+                keys=dynamic_keys,
+                prob=0.3,
+                range_x=0.4,
+                mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)
+            ),
+            Rand2DElasticd(
+                keys=dynamic_keys,
+                prob=0.2,
+                spacing=(20, 20),
+                magnitude_range=(1, 2),
+                mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)
+            )
         ])
+
+        appearance = Compose([
+            RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)),
+            PerturbationFactory.gaussian_noise(),
+            PerturbationFactory.gaussian_blur(),
+            PerturbationFactory.specular(),
+            PerturbationFactory.surgical_smoke(),
+            PerturbationFactory.intensity_shift(),
+        ])
+
+        if not is_sequential:
+            return spatial + appearance
+
+        return (
+            spatial,
+            appearance,
+        )
 
     @staticmethod
     def get_eval_scenarios(mode="none", is_sequential=False):

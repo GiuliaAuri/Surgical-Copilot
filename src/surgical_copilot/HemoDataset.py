@@ -366,9 +366,6 @@ class HemosetDataSequences(HemosetDataSet):
             ToTensord(keys=["current_image", "current_label"], dtype=torch.float32),
         ])
 
-        self.base_transforms = Compose([
-            SequenceTransform(self.frame_transforms)
-        ])
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=4, train_transforms=None):
         
@@ -421,8 +418,15 @@ class HemosetDataSequences(HemosetDataSet):
             f"test={len(test_files)}"
         )
 
-        train_transforms_video = VideoConsistentWrapper(transforms=train_transforms, keys=["current_image", "current_label"], appearance_mode="shared")
-        train_compose = (Compose([self.base_transforms,train_transforms_video]) if train_transforms  else self.base_transforms)
+        spatial, appearance = train_transforms
+
+        train_compose = Compose([    
+            SequenceTransform(self.frame_transforms),
+            VideoConsistentWrapper(
+                spatial_transform=spatial,
+                frame_transform=appearance,
+                keys=["current_image", "current_label"],
+            )])
 
         train_ds = CacheDataset(train_files, transform=train_compose, cache_rate=cache_rate)
         val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
@@ -504,6 +508,7 @@ from monai.transforms import MapTransform, Compose
 class SequenceTransform(MapTransform):
     
     def __init__(self, frame_transform):
+        super().__init__(keys=["current_image", "current_label"])
         self.frame_transform = frame_transform
 
     def __call__(self, data):
@@ -511,11 +516,11 @@ class SequenceTransform(MapTransform):
         images = []
         labels = []
 
-        for img_path, lbl_path in zip(data["current_image"], data["current_label"]):
+        for img, lbl in zip(data["current_image"], data["current_label"]):
 
             sample = {
-                "current_image": img_path,
-                "current_label": lbl_path,
+                "current_image": img,
+                "current_label": lbl,
             }
 
             sample = self.frame_transform(sample)
@@ -577,56 +582,73 @@ class CreatePreviousMaskd(MapTransform):
 
         return d
 
-from monai.transforms import (
-    RandSpatialCropd,
-    RandCropByPosNegLabeld,
-    RandFlipd,
-    RandRotated,
-    Rand2DElasticd
-)
-
 
 class VideoConsistentWrapper(MapTransform):
-
-    def __init__(self, transforms, keys=["current_image", "current_label"], appearance_mode="shared"):
+    """
+    Apply sequential spatial transforms consistently across all frames, 
+    then apply frame-wise transforms independently.
+    """
+    def __init__(
+        self,
+        spatial_transform,
+        frame_transform=None,
+        keys=("current_image", "current_label"),
+    ):
         super().__init__(keys)
-        self.transforms = Compose(transforms)
-        self.appearance_mode = appearance_mode
+        self.spatial_transform = spatial_transform
+        self.frame_transform = frame_transform if frame_transform is not None else (lambda x: x)
 
     def __call__(self, data):
-
         d = dict(data)
+        spatial_input = {}
+        channels_map = {}
+        T = None
 
-        images = torch.as_tensor(d["current_image"])
-        masks  = torch.as_tensor(d["current_label"])
+        # flatten: (T, C, H, W) -> (T*C, H, W)
+        for key in self.keys:
+            if key in d:
+                tensor = d[key]
+                if tensor.ndim != 4:
+                    raise ValueError(f"Il tensore per {key} deve essere 4D (T, C, H, W). Trovato: {tensor.shape}")
+                
+                T_k, C_k, H, W = tensor.shape
+                if T is None:
+                    T = T_k
+                
+                channels_map[key] = C_k
+                spatial_input[key] = tensor.view(T_k * C_k, H, W)
+        
+        for k, v in d.items():
+            if k not in self.keys:
+                spatial_input[k] = v
 
-        if images.ndim != 4:
-            raise ValueError(f"Expected (T,C,H,W), got {images.shape}")
+        #  Spatial Transform
+        spatial_out = self.spatial_transform(spatial_input)
+        
+        # manage num_samples > 1 (es. RandCropByPosNegLabeld)
+        if isinstance(spatial_out, list):
+            spatial_out = spatial_out[0]
 
-        T = images.shape[0]
+        # unflatten: (T*C, H', W') -> (T, C, H', W')
+        for key in self.keys:
+            if key in spatial_out:
+                out_tensor = spatial_out[key]
+                _, H_new, W_new = out_tensor.shape
+                C_original = channels_map[key]
+                d[key] = out_tensor.view(T, C_original, H_new, W_new)
 
-        seed = torch.randint(0, 1_000_000, (1,)).item()
-
-        out_img, out_msk = [], []
-
+        # frame-wise Transforms (Appearance)
+        processed_frames = {key: [] for key in self.keys if key in d}
+        
         for t in range(T):
+            frame_data = {key: d[key][t] for key in self.keys if key in d}
+            frame_out = self.frame_transform(frame_data)
+            
+            for key in processed_frames:
+                processed_frames[key].append(frame_out[key])
 
-            if self.appearance_mode == "shared":
-                torch.manual_seed(seed)
-            else:
-                torch.manual_seed(torch.randint(0, 1_000_000, (1,)).item())
-
-            frame = {
-                "current_image": images[t],
-                "current_label": masks[t]
-            }
-
-            frame = self.transforms(frame)
-
-            out_img.append(frame["current_image"])
-            out_msk.append(frame["current_label"])
-
-        d["current_image"] = torch.stack(out_img)
-        d["current_label"] = torch.stack(out_msk)
+        # reconstruct temporal tensors
+        for key in processed_frames:
+            d[key] = torch.stack(processed_frames[key])
 
         return d
