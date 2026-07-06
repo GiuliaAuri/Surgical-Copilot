@@ -140,7 +140,7 @@ class YOLOLateFusionTemporalSequential(nn.Module):
             )
         
 
-    def forward(self, x):
+    def forward(self, x, states=None):
 
         assert x.ndim == 5, "Expected input x to be a 5D tensor of shape (B, T, C, H, W)"
 
@@ -156,11 +156,15 @@ class YOLOLateFusionTemporalSequential(nn.Module):
         K = coeffs.shape[1]
         h, w = protos.shape[-2:]
 
-        coeffs = coeffs.view(B, T, K, 1, 1)
+        # coeffs are the weights of the combination of the 
+        # K prototype masks for each frame.
+        coeffs = coeffs.reshape(B, T, K, 1, 1)
 
-        protos = protos.view(B, T, K, h, w)
+        # protos are the prototype masks that contain
+        # the spatial information for each of the K masks.
+        protos = protos.reshape(B, T, K, h, w)
 
-        coeffs, _ = self.temporal(coeffs)  # (B, T, K, 1, 1)
+        coeffs, states = self.temporal(coeffs, states)  # (B, T, K, 1, 1)
 
         # broadcast su spazio
         coeffs = coeffs.expand(-1, -1, -1, h, w)
@@ -174,4 +178,7 @@ class YOLOLateFusionTemporalSequential(nn.Module):
             align_corners=False,
         )
 
-        return mask_logits.view(B, T, 1, H, W)
+        return (
+            mask_logits.reshape(B,T,1,H,W),
+            states
+        )

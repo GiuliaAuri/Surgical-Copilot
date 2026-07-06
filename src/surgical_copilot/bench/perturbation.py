@@ -282,7 +282,7 @@ class PerturbationPipelines:
             ),
             RandCropByPosNegLabeld(
                 keys=dynamic_keys,
-                label_key="label",
+                label_key="current_label",
                 spatial_size=(320, 320),
                 pos=2,
                 neg=1,
@@ -306,7 +306,7 @@ class PerturbationPipelines:
         ])
 
         appearance = Compose([
-            RandAdjustContrastd(keys=["image"], prob=0.5, gamma=(0.5, 1.5)),
+            RandAdjustContrastd(keys=["current_image"], prob=0.5, gamma=(0.5, 1.5)),
             PerturbationFactory.gaussian_noise(),
             PerturbationFactory.gaussian_blur(),
             PerturbationFactory.specular(),
