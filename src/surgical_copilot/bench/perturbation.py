@@ -9,10 +9,12 @@ from monai.transforms import (
     RandShiftIntensityd,
     Compose,
     RandRotated,
+    RandAffined,
     RandFlipd,
     Rand2DElasticd,
     Rand2DElasticd,
-    MapTransform
+    MapTransform, 
+    Lambdad,
 )
 
 
@@ -177,11 +179,64 @@ class PerturbationPipelines:
 
     @staticmethod
     def get_train_pipeline(mode="standard"):
-
         dynamic_keys = PerturbationPipelines.KEY_MAPS[mode]
+
+        # Funzioni di utilità per gestire il tempo come se fosse Z
+        # def make_spatial(x):
+        #     if x.ndim == 4:
+        #         return x.permute(1, 0, 2, 3) # (C, T, H, W)
+        #     return x
+# 
+        # def make_temporal(x):
+        #     if x.ndim == 4:
+        #         return x.permute(1, 0, 2, 3) # Ritorna (T, C, H, W)
+        #     return x
+
+        #return Compose([
+        #    Lambdad(keys=dynamic_keys, func=make_spatial),
+#
+        #    # Il crop deve essere (1, 320, 320) per non toccare la dimensione temporale
+        #    RandSpatialCropd(keys=dynamic_keys, roi_size=(1, 320, 320), random_size=False),
+        #    RandCropByPosNegLabeld(
+        #        keys=dynamic_keys,
+        #        label_key='current_label',
+        #        spatial_size=(1, 320, 320),
+        #        pos=2, neg=1, num_samples=2
+        #    ),
+#
+        #    RandAdjustContrastd(keys=["current_image"], prob=0.5, gamma=(0.5, 1.5)),
+        #    RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=1), # H
+        #    RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=2), # W
+        #    
+        #    RandAffined(
+        #        keys=dynamic_keys,
+        #        prob=0.3,
+        #        rotate_range=(0.4, 0.4, 0.0), # (T, H, W) -> Rotazione solo su H e W
+        #        mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)
+        #    ),,
+        #    # TRUCCO PER Rand2DElasticd: devi passare 3 valori di spacing 
+        #    # e forzare la deformazione a non toccare Z (Tempo)
+        #    Rand2DElasticd(
+        #        keys=dynamic_keys, 
+        #        prob=0.2, 
+        #        # Ora che hai permutatato (C, T, H, W), MONAI vede 3 dimensioni spaziali.
+        #        # Devi passare 3 valori allo spacing: (Z_o_T, H, W)
+        #        spacing=(1.0, 20.0, 20.0), 
+        #        magnitude_range=(1, 2), 
+        #        # È fondamentale che mode sia una lista di lunghezza corretta 
+        #        # per ogni chiave in dynamic_keys
+        #        mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)
+        #    ),
+        #    Lambdad(keys=dynamic_keys, func=make_temporal),
+        #])
 
         # same cofiguaration of Hemoset's authors for training
         return Compose([
+            Lambdad(
+                keys=dynamic_keys,
+                func=lambda x: x[0, :, :, :] if x.ndim == 4 else x  # Se è 4D, prendi solo il primo elemento della prima dimensione (Canale)
+            ),
+            #Lambdad(keys=["current_image"], func=lambda x: print(f"SHAPE DOPO SQUEEZE: {x.shape}") or x),
             RandSpatialCropd(keys=dynamic_keys, roi_size=(320, 320), random_size=False), 
             RandCropByPosNegLabeld(
                 keys=dynamic_keys,
