@@ -10,33 +10,27 @@ def transfer_weights_to_temporal(baseline_path: str, save_path: str, target_laye
         return False
 
     print(f"[*] -> Estrazione pesi da: {baseline_path}")
+
     baseline_state_dict = torch.load(baseline_path, map_location="cpu")
     temporal_state_dict = {}
-    layer_found = False
 
     for layer_name, weights in baseline_state_dict.items():
-        if layer_name == target_layer_name:
-            layer_found = True
-            out_ch, in_ch, kh, kw = weights.shape
-            
-            # Crea tensore vuoto a 4 canali
+        # Se il layer è una convoluzione che accetta input (es. ha 3 canali)
+        if weights.ndim == 4 and weights.shape[1] == 3:
+            out_ch, _, kh, kw = weights.shape
             new_weights = torch.zeros((out_ch, new_channels, kh, kw), dtype=weights.dtype)
-            
-            # Copia i canali disponibili (RGB)
-            channels_to_copy = min(in_ch, new_channels)
-            new_weights[:, :channels_to_copy, :, :] = weights[:, :channels_to_copy, :, :].clone()
-            
+            # Copia i canali RGB esistenti
+            new_weights[:, :3, :, :] = weights.clone()
+            # Inizializza il 4° canale (es. media dei canali RGB per mantenere il range)
+            new_weights[:, 3, :, :] = weights.mean(dim=1)
             temporal_state_dict[layer_name] = new_weights
+            print(f"[*] Layer trovato: {layer_name}, shape originale: {weights.shape}")
         else:
+            # Per tutti gli altri layer (bias, batchnorm, residuali 1x1, ecc.)
             temporal_state_dict[layer_name] = weights.clone()
 
-    if not layer_found:
-        print(f"[!] ATTENZIONE: Il layer '{target_layer_name}' non esiste in questa rete!")
-        return False
-
-    os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
     torch.save(temporal_state_dict, save_path)
-    print(f"[*] -> Pesi temporali creati con successo in: {save_path}")
+    print(f"[*] -> Pesi temporali salvati in: {save_path}")
     return True
 
 def load_or_create_temporal_weights(model, fold_idx: int, device, target_layer_name: str):
