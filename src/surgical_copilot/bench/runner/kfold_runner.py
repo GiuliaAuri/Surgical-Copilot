@@ -117,7 +117,9 @@ class KFoldRunner:
 
         batch_size = self.cfg.trainer.trainer.batch_size
 
-        train_transforms = PerturbationPipelines.get_train_pipeline(mode=self.temporal_mode.value)
+        is_sequential = True if self.temporal_mode == TemporalMode.LATE_FUSION else False
+
+        train_transforms = PerturbationPipelines.get_train_pipeline(mode=self.temporal_mode.value, is_sequential=is_sequential)
 
         train_loader, val_loader, test_loader = dataset.get_loaders(
             fold_idx=fold,
