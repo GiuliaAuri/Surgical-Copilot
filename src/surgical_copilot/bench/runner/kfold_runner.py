@@ -37,6 +37,8 @@ class KFoldRunner:
         elif self.temporal_mode == TemporalMode.EARLY_FUSION: dataset_cls = HemosetEarlyFusion
         else: dataset_cls = HemosetDataSequences
 
+        print(dataset_cls.__name__)
+
         dataset_kwargs = {
             "root_dir": self.cfg.data.root_dir,
             "seed": self.cfg.seed,
@@ -120,6 +122,8 @@ class KFoldRunner:
         is_sequential = True if self.temporal_mode == TemporalMode.LATE_FUSION else False
 
         train_transforms = PerturbationPipelines.get_train_pipeline(mode=self.temporal_mode.value, is_sequential=is_sequential)
+
+        print(f"[Runner] Modalità: {self.temporal_mode.value} | Sequential: {is_sequential}")
 
         train_loader, val_loader, test_loader = dataset.get_loaders(
             fold_idx=fold,

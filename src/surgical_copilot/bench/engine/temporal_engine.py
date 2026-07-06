@@ -59,6 +59,14 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
                     eps=1e-6
                 )
         }
+
+    def _check_patient(self, batch):
+
+        patient = batch["patient_id"][0]
+
+        if patient != self._current_patient:
+            self.recurrent_state = None
+            self._current_patient = patient
     
     def _reset_temporal_state(self):
         self.recurrent_state = None
@@ -121,6 +129,8 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         # LATE_FUSION mode: we expect the input to be a sequence of frames, so we don't concatenate the previous mask, 
         # but we still need to reset the temporal state for each new batch.
 
+        self._check_patient(batch)
+
         images = batch["current_image"].to(self.device)  # shape: (B, T, C, H, W)
         labels = batch["current_label"].to(self.device)  # shape: (B, T, 1, H, W)
 
@@ -129,6 +139,25 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self.last_x = images.clone().detach()  # Store the last input for temporal metrics
 
         return images, labels
+    
+    def _detach_state(self, state):
+
+        if state is None:
+            return None
+
+        if isinstance(state, tuple):
+            return tuple(
+                s.detach()
+                for s in state
+            )
+
+        if isinstance(state, list):
+            return [
+                s.detach()
+                for s in state
+            ]
+
+        return state.detach()
 
     def _early_fusion_forward(self, x, y):
 
@@ -152,36 +181,20 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
     def _late_fusion_forward(self, x, y):
 
-        assert x.ndim == 5, "Expected input x to be a 5D tensor of shape (B, T, C, H, W)"
-    
-        B, T, C, H, W = x.shape
-        total_loss = 0.0
-        all_logits = []
+        assert x.ndim == 5
 
-        for t in range(T):
-            x_t = x[:, t] 
-            y_t = y[:, t]
+        logits, self.recurrent_state = self.model(x, self.recurrent_state)
+        
+        # truncate the recurrent state to the current batch size and sequence length
+        self.recurrent_state = self._detach_state(
+            self.recurrent_state
+        )
 
-            # Inizializza logits_t per sicurezza
-            logits_t = None
+        loss = self.loss_fn(logits, y)
 
-            logits_t, self.recurrent_state = self.model(x_t, self.recurrent_state)
-
-            if isinstance(logits_t, list):
-                step_loss = sum(self.loss_fn(l, y_t) for l in logits_t) / len(logits_t)
-                main_logits_t = logits_t[0]
-            else:
-                step_loss = self.loss_fn(logits_t, y_t)
-                main_logits_t = logits_t
-
-            total_loss += step_loss
-            all_logits.append(main_logits_t)
-
-        stacked_logits = torch.stack(all_logits, dim=1)
-        loss = total_loss / T  / self.accumulation_steps
-        return  {
-            "loss": loss, 
-            "logits": stacked_logits
+        return {
+            "loss": loss / self.accumulation_steps,
+            "logits": logits
         }
 
     def _forward_step(self, x, y):

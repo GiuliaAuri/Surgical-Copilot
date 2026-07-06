@@ -39,10 +39,10 @@ class RecurrentWrapper(nn.Module):
         # x shape attesa: (B, T, C, H, W)
         logger.debug(f"[RecurrentWrapper] Input shape (B, T, C, H, W): {x.shape}")
         
-        output_seq, _ = self.rnn(x, states)
+        output_seq, states = self.rnn(x, states)
         
         logger.debug(f"[RecurrentWrapper] Output shape (B, T, C, H, W): {output_seq.shape}")
-        return output_seq
+        return output_seq, states
 
 
 class InjectedBottleneck(nn.Module):
@@ -55,7 +55,9 @@ class InjectedBottleneck(nn.Module):
         self.current_B = 1
         self.current_T = 1
 
-    def forward(self, x):
+        self.states = None
+
+    def forward(self, x, states=None):
         logger.debug(f"[InjectedBottleneck] Input flat shape (B*T, C, H, W): {x.shape}")
         
         x_spatial = self.spatial_layer(x)
@@ -68,9 +70,11 @@ class InjectedBottleneck(nn.Module):
         x_seq = x_spatial.view(self.current_B, self.current_T, C, H, W)
         logger.debug(f"[InjectedBottleneck] Sequence unflattening per RNN (B={self.current_B}, T={self.current_T}): {x_seq.shape}")
 
-        output_seq = self.recurrent_wrapper(x_seq)
+        output_seq, new_states = self.recurrent_wrapper(x_seq, states)
 
-        output_flat = output_seq.contiguous().view(BxT, C, H, W)
+        self.states = new_states
+
+        output_flat = output_seq.contiguous().reshape(BxT, C, H, W)
         logger.debug(f"[InjectedBottleneck] Output flat shape (ritorno alla U-Net): {output_flat.shape}")
 
         return output_flat
@@ -158,7 +162,9 @@ class RecurrentUNet(nn.Module):
                 
         return False
 
-    def forward(self, x):
+    def forward(self, x, states=None):
+
+        print(f"[RecurrentUNet Forward] Input shape (B, T, C, H, W): {x.shape}")
 
         assert x.ndim == 5, "Input tensor must have shape (B, T, C, H, W) for the forward pass."
     
@@ -168,6 +174,8 @@ class RecurrentUNet(nn.Module):
 
         self.injected_module.current_B = B
         self.injected_module.current_T = T
+        self.injected_module.states = states
+
 
         logits_flat = self.unet(x_flat)
         logger.debug(f"[RecurrentUNet Forward] Logits flat da U-Net: {logits_flat.shape}")
@@ -177,4 +185,4 @@ class RecurrentUNet(nn.Module):
         
         logger.debug(f"[RecurrentUNet Forward] Output sequenziale finale (B, T, C, H, W): {logits_seq.shape}")
 
-        return logits_seq
+        return logits_seq, states
