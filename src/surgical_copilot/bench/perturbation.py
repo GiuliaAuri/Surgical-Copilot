@@ -9,10 +9,12 @@ from monai.transforms import (
     RandShiftIntensityd,
     Compose,
     RandRotated,
+    RandAffined,
     RandFlipd,
     Rand2DElasticd,
     Rand2DElasticd,
-    MapTransform
+    MapTransform, 
+    Lambdad,
 )
 
 
@@ -269,6 +271,10 @@ class PerturbationPipelines:
         dynamic_keys = PerturbationPipelines.KEY_MAPS[mode]
         
         spatial = Compose([
+          # Lambdad(
+          #     keys=dynamic_keys,
+          #     func=lambda x: x[0, :, :, :] if x.ndim == 4 else x  # Se è 4D, prendi solo il primo elemento della prima dimensione (Canale)
+          # ),
             RandSpatialCropd(
                 keys=dynamic_keys,
                 roi_size=(320, 320),
