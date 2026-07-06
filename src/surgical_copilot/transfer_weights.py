@@ -45,8 +45,8 @@ def load_or_create_temporal_weights(model, fold_idx: int, device, target_layer_n
     dei pesi per una rete temporale, rispettando il Fold corrente.
     """
     nome_classe_modello = model.__class__.__name__ 
-    path_baseline = f"results/best_{nome_classe_modello}_fold{fold_idx}.pth"
-    path_temporal = f"results/temporal_pretrained_fold{fold_idx}.pth"
+    path_baseline = f"/work/cvcs2026/DeepLook/results/weights/{nome_classe_modello}/best_fold{fold_idx}.pth"
+    path_temporal = f"/work/cvcs2026/DeepLook/results/weights/{nome_classe_modello}/best_fold{fold_idx}_4ch.pth"
     
     # Crea i pesi temporali se non esistono
     if not os.path.exists(path_temporal):
