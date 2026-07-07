@@ -57,7 +57,7 @@ unet_resnet18_early_fusion_warmup_on:
 
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: "model.encoder.conv1.weight" # Copia i pesi da 3 a 4 canali
+    temporal_target_layer: "model.0.conv.unit0.conv.weight" # Copia i pesi da 3 a 4 canali
 
   initialization:
     warmup_epochs: 5
@@ -91,7 +91,7 @@ unet_resnet18_early_fusion_warmup_off:
 
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: "model.encoder.conv1.weight" # Copia i pesi da 3 a 4 canali
+    temporal_target_layer: "model.0.conv.unit0.conv.weight" # Copia i pesi da 3 a 4 canali
 
   initialization:
     warmup_epochs: 0
