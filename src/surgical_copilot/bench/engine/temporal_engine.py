@@ -134,6 +134,10 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         images = batch["current_image"].to(self.device)  # shape: (B, T, C, H, W)
         labels = batch["current_label"].to(self.device)  # shape: (B, T, 1, H, W)
 
+        print("[TemporalBenchmarkEngine] Preparing inputs for LATE_FUSION mode:")
+        print("  Images shape:", images.shape)
+        print("  Labels shape:", labels.shape)
+
         #self._reset_temporal_state()
 
         self.last_x = images.clone().detach()  # Store the last input for temporal metrics
@@ -145,6 +149,9 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         if state is None:
             return None
 
+        if isinstance(state, torch.Tensor):
+            return state.detach()
+
         if isinstance(state, tuple):
             return tuple(
                 s.detach()
@@ -153,11 +160,11 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
         if isinstance(state, list):
             return [
-                s.detach()
+                self._detach_state(s)
                 for s in state
             ]
 
-        return state.detach()
+        return state
 
     def _early_fusion_forward(self, x, y):
 

@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 from typing import List, Tuple, Optional
 
+import logging
+
+logger = logging.getLogger("ConvGRU")
+
 class ConvGRUCell(nn.Module):
     """
     Una singola cella ConvGRU. 
@@ -66,18 +70,12 @@ class ConvGRU(nn.Module):
         X: torch.Tensor,
         initial_states: Optional[List[torch.Tensor]] = None,
     ):
-        """
-        X: (B, T, C, H, W)
-
-        returns:
-            last_layer_output: (B, T, C, H, W) or (B, C, H, W)
-            last_states: list of final hidden states per layer
-        """
-
-        B, T, _, H, W = X.shape
+        B, T, C, H, W = X.shape
+        logger.debug(f"[ConvGRU] Input shape: {X.shape}")
 
         if initial_states is None:
             states = [None] * self.num_layers
+            logger.debug("[ConvGRU] No initial states provided, initializing with zeros.")
         else:
             states = list(initial_states)
 
@@ -85,7 +83,6 @@ class ConvGRU(nn.Module):
         current_input = X
 
         for l, cell in enumerate(self.cells):
-
             h = states[l]
             if h is None:
                 h = torch.zeros(
@@ -93,24 +90,27 @@ class ConvGRU(nn.Module):
                     device=X.device,
                     dtype=X.dtype
                 )
+            
+            logger.debug(f"[ConvGRU] Layer {l} processing. Input: {current_input.shape}, Hidden: {h.shape}")
 
             h_list = []
-
             for t in range(T):
                 h = cell(current_input[:, t], h)
                 h_list.append(h)
 
             seq = torch.stack(h_list, dim=1)
-
+            
             if not self.return_sequence:
                 seq = seq[:, -1]
+                logger.debug(f"[ConvGRU] Layer {l} returned last frame: {seq.shape}")
+            else:
+                logger.debug(f"[ConvGRU] Layer {l} returned sequence: {seq.shape}")
 
             layer_outputs.append(seq)
             current_input = seq
-
             states[l] = h
 
         last_layer_output = layer_outputs[-1]
-        last_states = states
-
-        return last_layer_output, last_states
+        logger.debug(f"[ConvGRU] Final output shape: {last_layer_output.shape}")
+        
+        return last_layer_output, states

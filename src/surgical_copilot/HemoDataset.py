@@ -224,9 +224,10 @@ class HemosetEarlyFusion(HemosetDataSet):
             
             CreatePreviousMaskd(keys=["prev_label"]),
             
-            EnsureChannelFirstd(keys=["current_image", "current_label", "prev_label"], channel_dim="no_channel"),
+            EnsureChannelFirstd(keys=["current_image"]),
+            EnsureChannelFirstd(keys=["current_label", "prev_label"]),
             
-            Lambdad(keys=["current_image", "current_label", "prev_label"], func=lambda x: x.squeeze(0)),
+            #Lambdad(keys=["current_image", "current_label", "prev_label"], func=lambda x: x.squeeze(0)),
             
             Resized(
                 keys=["current_image", "current_label", "prev_label"],
@@ -235,7 +236,7 @@ class HemosetEarlyFusion(HemosetDataSet):
                 lazy=True
             ),
             
-            Lambdad(keys=["current_image", "current_label", "prev_label"], func=lambda x: np.expand_dims(x, axis=0)),
+            #Lambdad(keys=["current_image", "current_label", "prev_label"], func=lambda x: np.expand_dims(x, axis=0)),
             
             ScaleIntensityRanged(keys=["current_image"], a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True),
             
@@ -250,11 +251,11 @@ class HemosetEarlyFusion(HemosetDataSet):
                 func=lambda x: x.detach().cpu()
             )
         ])        
-        
-
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=0.2, batch_size=4, num_workers=2, train_transforms=None):
         
+        print("batch_size =", batch_size)
+
         patients = sorted(list(self.patient_data.keys()))
 
         if n_splits > len(patients):
@@ -443,9 +444,14 @@ class HemosetDataSequences(HemosetDataSet):
                 keys=["current_image", "current_label"],
             )])
 
+        eval_compose = Compose([
+            SequenceTransform(self.frame_transforms)
+        ])
+
+
         train_ds = Dataset(train_files, transform=train_compose)
-        val_ds = Dataset(val_files, transform=self.base_transforms)
-        test_ds = Dataset(test_files, transform=self.base_transforms)
+        val_ds = Dataset(val_files, transform=eval_compose)
+        test_ds = Dataset(test_files, transform=eval_compose)
 
         train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=False, drop_last=True, persistent_workers=False)
         val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=False, persistent_workers=False)
@@ -571,58 +577,57 @@ class UnflattenSequenced(MapTransform):
     
 from monai.transforms import LoadImaged
 
-class CreatePreviousMaskd(MapTransform):
-    def __init__(self, keys, allow_missing_keys=False):
-        super().__init__(keys, allow_missing_keys)
-        self.loader = LoadImage(reader="PILReader", image_only=False)
-
-    def __call__(self, data):
-        d = dict(data)
-        for key in self.keys:
-            prev = d[key]
-            if prev is None:
-                d[key] = torch.zeros_like(d["current_label"])
-            elif isinstance(prev, str):
-                
-                output = self.loader(prev)
-                
-                
-                img = output[0] if isinstance(output, (tuple, list)) else output
-                
-                
-                if not isinstance(img, np.ndarray):
-                    img = np.array(img)
-                
-                d[key] = torch.as_tensor(img).detach().cpu()
-        return d
 #class CreatePreviousMaskd(MapTransform):
 #    def __init__(self, keys, allow_missing_keys=False):
 #        super().__init__(keys, allow_missing_keys)
+#        self.loader = LoadImage(reader="PILReader", image_only=False)
 #
 #    def __call__(self, data):
 #        d = dict(data)
-#
 #        for key in self.keys:
 #            prev = d[key]
-#
 #            if prev is None:
-#                shape = d["current_label"].shape
 #                d[key] = torch.zeros_like(d["current_label"])
-#
 #            elif isinstance(prev, str):
-#                loaded = LoadImaged(
-#                    keys=[key],
-#                    reader="PILReader",
-#                    image_only=False
-#                )({key: prev})
-#
-#                d[key] = loaded[key]
-#
-#            else:
-#                d[key] = prev
-#
+#                
+#                output = self.loader(prev)
+#                
+#                
+#                img = output[0] if isinstance(output, (tuple, list)) else output
+#                
+#                
+#                if not isinstance(img, np.ndarray):
+#                    img = np.array(img)
+#                
+#                d[key] = torch.as_tensor(img).detach().cpu()
 #        return d
+class CreatePreviousMaskd(MapTransform):
+    def __init__(self, keys, allow_missing_keys=False):
+        super().__init__(keys, allow_missing_keys)
 
+    def __call__(self, data):
+        d = dict(data)
+
+        for key in self.keys:
+            prev = d[key]
+
+            if prev is None:
+                shape = d["current_label"].shape
+                d[key] = torch.zeros_like(d["current_label"])
+
+            elif isinstance(prev, str):
+                loaded = LoadImaged(
+                    keys=[key],
+                    reader="PILReader",
+                    image_only=False
+                )({key: prev})
+
+                d[key] = loaded[key]
+
+            else:
+                d[key] = prev
+
+        return d
 
 class VideoConsistentWrapper(MapTransform):
     """
