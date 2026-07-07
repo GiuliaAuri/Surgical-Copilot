@@ -17,6 +17,8 @@ from monai.transforms import (
     Lambdad,
 )
 
+import random
+
 
 class VideoRandCropByPosNegLabeld(MapTransform):
     """
@@ -122,33 +124,42 @@ class VideoConsistentWrapper(MapTransform):
         lbl_key = self.keys[1]
 
         images = d[img_key]   # (B, T, C, H, W)
+        print("[WRAPPRING] Before spatial transform:", images.shape)
         masks  = d[lbl_key]
 
-        B, T = images.shape[:2]
+        #B = images.shape[0]
 
         out_images, out_masks = [], []
 
-        for b in range(B):
+        #for b in range(B):
             # Crea il dizionario temporaneo usando le chiavi corrette
-            video = {"current_image": images[b], "current_label": masks[b]}
+        video = {"current_image": d[img_key], "current_label": d[lbl_key]}
 
-            seed = torch.randint(0, 1_000_000, (1,)).item()
-            torch.manual_seed(seed)
+        seed = torch.randint(0, 1_000_000, (1,)).item()
+        torch.manual_seed(seed)
 
-            video = self.spatial_transform(video)
+        video = self.spatial_transform(video)
 
-            imgs, msks = video["current_image"], video["current_label"]
+        imgs, msks = video["current_image"], video["current_label"]
+            
+        print(
+            "Before frame loop:",
+            "imgs", imgs.shape,
+            "msks", msks.shape
+        )
 
-            frames_img, frames_msk = [], []
+        frames_img, frames_msk = [], []
 
-            for t in range(T):
-                frame = {"current_image": imgs[t], "current_label": msks[t]}
-                frame = self.frame_transform(frame)
-                frames_img.append(frame["current_image"])
-                frames_msk.append(frame["current_label"])
+        T_current = imgs.shape[0]
 
-            out_images.append(torch.stack(frames_img))
-            out_masks.append(torch.stack(frames_msk))
+        for t in range(T_current):
+            frame = {"current_image": imgs[t], "current_label": msks[t]}
+            frame = self.frame_transform(frame)
+            frames_img.append(frame["current_image"])
+            frames_msk.append(frame["current_label"])
+
+        out_images.append(torch.stack(frames_img))
+        out_masks.append(torch.stack(frames_msk))
 
         # Riassegna i risultati alle chiavi corrette
         d[img_key] = torch.stack(out_images)

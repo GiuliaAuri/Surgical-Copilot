@@ -145,6 +145,11 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         if state is None:
             return None
 
+       
+
+        if isinstance(state, torch.Tensor):
+            return state.detach()
+
         if isinstance(state, tuple):
             return tuple(
                 s.detach()
@@ -153,11 +158,11 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
         if isinstance(state, list):
             return [
-                s.detach()
+                self._detach_state(s)
                 for s in state
             ]
 
-        return state.detach()
+        return state
 
     def _early_fusion_forward(self, x, y):
 

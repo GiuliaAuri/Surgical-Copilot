@@ -9,6 +9,9 @@ import torch
 import torch.nn as nn
 from typing import Optional, Tuple, List
 
+import logging
+logger = logging.getLogger("ConvLSTM")
+
 
 class ConvLSTMCell(nn.Module):
     """
@@ -93,7 +96,6 @@ class ConvLSTMCell(nn.Module):
 
         # Combined linear transform
         gates = self.conv_x(X) + self.conv_h(H_prev)           # (B, 4*hid, H, W)
-
         i_gate, f_gate, g_gate, o_gate = gates.chunk(4, dim=1) # each (B, hid, H, W)
 
         # Peephole connections from C_{t-1}
@@ -171,40 +173,68 @@ class ConvLSTM(nn.Module):
                          or (B, C_hid, H, W) if return_sequence=False
         last_states    : list (one per layer) of (H_T, C_T)
         """
-        B, T, _, H, W = X.shape
 
-        # Initialise states
-        states: List[Optional[Tuple[torch.Tensor, torch.Tensor]]]
+        B, T, C, H, W = X.shape
+        print(f"[ConvLSTM] Input shape: {X.shape}")
+
         if initial_states is None:
             states = [None] * self.num_layers
+            print("[ConvLSTM] No initial states, using None (lazy initialization in cell).")
         else:
             states = list(initial_states)
+            print(f"[ConvLSTM] Initial states provided for {len(states)} layers.")
 
         layer_outputs: List[torch.Tensor] = []
-
-        current_input = X   # (B, T, C, H, W)
+        current_input = X
 
         for l, cell in enumerate(self.cells):
             h_list: List[torch.Tensor] = []
             state = states[l]
 
+            print(f"[ConvLSTM] Layer {l} processing. Input: {current_input.shape}")
+            print(f"[ConvLSTM] state type: {type(state)}")
+            print(f"[ConvLSTM] is tensor: {isinstance(state, torch.Tensor)}")
+
+            if isinstance(state, torch.Tensor):
+                print(f"[ConvLSTM] state.shape: {state.shape}")
+            elif isinstance(state, tuple):
+                print(f"[ConvLSTM] tuple shapes: {[x.shape for x in state]}")
+
+            for i, s in enumerate(states):
+                print(f"Layer index: {i}, State type: {type(s)}")
+
             for t in range(T):
-                x_t = current_input[:, t]          # (B, C, H, W)
+                x_t = current_input[:, t]
                 h_t, c_t = cell(x_t, state)
                 state = (h_t, c_t)
                 h_list.append(h_t)
 
-            states[l] = state                      # save final state
+            print("DEBUG STATE AFTER LAYER")
+            print(type(states[l]))
 
+            if isinstance(states[l], tuple):
+                print("tuple length:", len(states[l]))
+                print(states[l][0].shape)
+                print(states[l][1].shape)
+
+            states[l] = state
+            
             # Stack along time: (B, T, C_hid, H, W)
             seq = torch.stack(h_list, dim=1)
+            
+            if not self.return_sequence:
+                seq = seq[:, -1]
+                print(f"[ConvLSTM] Layer {l} returned last frame: {seq.shape}")
+            else:
+                print(f"[ConvLSTM] Layer {l} returned sequence: {seq.shape}")
+
             layer_outputs.append(seq)
-            current_input = seq                    # feed into next layer
+            current_input = seq
 
-        if not self.return_sequence:
-            layer_outputs = [o[:, -1] for o in layer_outputs]
+        last_layer_output = layer_outputs[-1]
+        #last_states = states[-1]
 
-        last_layer_output = layer_outputs[-1]  # (B, T, C_hid, H, W) or (B, C_hid, H, W)
-        last_states = states[-1]               # (H_T, C_T)
-
-        return last_layer_output, last_states
+        print(f"[ConvLSTM] Final output: {last_layer_output.shape}")
+        #print(f"[ConvLSTM] Final states: {[s[0].shape for s in last_states]}")
+        
+        return last_layer_output, states

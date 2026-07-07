@@ -267,7 +267,7 @@ yolo_late_fusion_gru:
 
 yolo_late_fusion_lstm:
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporal
+    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
     in_channels: 3
     num_classes: 1
     num_masks: 32
