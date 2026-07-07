@@ -111,7 +111,6 @@ class VideoRandCropByPosNegLabeld(MapTransform):
 class VideoConsistentWrapper(MapTransform):
 
     def __init__(self, spatial_transform, frame_transform, keys=None):
-        # Imposta le chiavi di default sui nuovi nomi
         super().__init__(keys or ["current_image", "current_label"])
         self.spatial_transform = spatial_transform
         self.frame_transform = frame_transform
@@ -119,51 +118,58 @@ class VideoConsistentWrapper(MapTransform):
     def __call__(self, data):
         d = dict(data)
 
-        # Usa le chiavi corrette (o quelle passate nel costruttore)
         img_key = self.keys[0] 
         lbl_key = self.keys[1]
 
-        images = d[img_key]   # (B, T, C, H, W)
-        print("[WRAPPRING] Before spatial transform:", images.shape)
+        images = d[img_key]  
         masks  = d[lbl_key]
 
-        #B = images.shape[0]
+        # Controllo dinamico: siamo nel Dataset (4D) o nell'Engine (5D)?
+        is_batched = images.ndim == 5
+        
+        if not is_batched:
+            # Aggiungiamo una dimensione batch fittizia per uniformare la logica
+            images = images.unsqueeze(0)
+            masks = masks.unsqueeze(0)
 
+        B = images.shape[0]
         out_images, out_masks = [], []
 
-        #for b in range(B):
-            # Crea il dizionario temporaneo usando le chiavi corrette
-        video = {"current_image": d[img_key], "current_label": d[lbl_key]}
+        for b in range(B):
+            # Estraiamo il video b-esimo: (T, C, H, W)
+            video = {"current_image": images[b], "current_label": masks[b]}
 
-        seed = torch.randint(0, 1_000_000, (1,)).item()
-        torch.manual_seed(seed)
+            # 1. Transform spaziale (T funge da batch, garantendo consistenza broadcasting)
+            seed = torch.randint(0, 1_000_000, (1,)).item()
+            torch.manual_seed(seed)
+            video = self.spatial_transform(video)
 
-        video = self.spatial_transform(video)
-
-        imgs, msks = video["current_image"], video["current_label"]
+            imgs, msks = video["current_image"], video["current_label"]
             
-        print(
-            "Before frame loop:",
-            "imgs", imgs.shape,
-            "msks", msks.shape
-        )
+            frames_img, frames_msk = [], []
+            T_current = imgs.shape[0]
 
-        frames_img, frames_msk = [], []
+            # 2. Transform temporale frame-specifico
+            for t in range(T_current):
+                frame = {"current_image": imgs[t], "current_label": msks[t]}
+                frame = self.frame_transform(frame)
+                frames_img.append(frame["current_image"])
+                frames_msk.append(frame["current_label"])
 
-        T_current = imgs.shape[0]
+            out_images.append(torch.stack(frames_img))
+            out_masks.append(torch.stack(frames_msk))
 
-        for t in range(T_current):
-            frame = {"current_image": imgs[t], "current_label": msks[t]}
-            frame = self.frame_transform(frame)
-            frames_img.append(frame["current_image"])
-            frames_msk.append(frame["current_label"])
+        # Ricomponiamo i tensori
+        final_images = torch.stack(out_images)
+        final_masks = torch.stack(out_masks)
 
-        out_images.append(torch.stack(frames_img))
-        out_masks.append(torch.stack(frames_msk))
+        # Se il dato in ingresso era 4D (Dataset), rimuoviamo il batch fittizio
+        if not is_batched:
+            final_images = final_images.squeeze(0)
+            final_masks = final_masks.squeeze(0)
 
-        # Riassegna i risultati alle chiavi corrette
-        d[img_key] = torch.stack(out_images)
-        d[lbl_key] = torch.stack(out_masks)
+        d[img_key] = final_images
+        d[lbl_key] = final_masks
 
         return d
 
@@ -326,7 +332,7 @@ class PerturbationPipelines:
         ])
 
         if not is_sequential:
-            return spatial + appearance
+            return Compose(spatial.transforms + appearance.transforms)
 
         return (
             spatial,
