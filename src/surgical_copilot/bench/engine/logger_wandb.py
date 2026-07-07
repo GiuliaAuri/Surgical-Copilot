@@ -34,17 +34,20 @@ class WandbLogger:
             "Metric_IoU/Baseline": metrics["baseline"]["iou"],
         }
 
+        if "temporal_iou" in metrics.get("baseline", {}):
+            log_dict["Metric_Temporal_IoU/Baseline"] = metrics["baseline"]["temporal_iou"]
+
         if "consistency" in metrics.get("baseline", {}):
             log_dict.update({
                 "Metric_Temporal_Consistancy/IoU": metrics["baseline"]["consistency"].get("temporal_iou", 0.0),
                 "Metric_Temporal_Consistancy/Dice": metrics["baseline"]["consistency"].get("temporal_dice", 0.0),
             })
 
-        if "interframe" in metrics.get("baseline", {}):
-            log_dict.update({
-                "Metric_Temporal_Interframe/IoU": metrics["baseline"]["interframe"].get("temporal_iou", 0.0),
-                "Metric_Temporal_Interframe/Dice": metrics["baseline"]["interframe"].get("temporal_dice", 0.0),
-            })
+        #if "interframe" in metrics.get("baseline", {}):
+        #    log_dict.update({
+        #        "Metric_Temporal_Interframe/IoU": metrics["baseline"]["interframe"].get("temporal_iou", 0.0),
+        #        "Metric_Temporal_Interframe/Dice": metrics["baseline"]["interframe"].get("temporal_dice", 0.0),
+        #    })
 
         for scenario, scores in metrics.get("stress", {}).items():
             log_dict[f"Metric_Dice/Stress_{scenario}"] = scores["dice"]
@@ -52,9 +55,12 @@ class WandbLogger:
             log_dict[f"Metric_IoU/Stress_{scenario}"] = scores["iou"]
 
             if "temporal_iou" in scores:
+                log_dict[f"Metric_Temporal_IoU/Stress_{scenario}"] = scores["temporal_iou"]
                 log_dict[f"Metric_Temporal_Var_IoU/Stress_{scenario}"] = scores["temporal_iou"]
-                log_dict[f"Metric_Temporal_Var_Dice/Stress_{scenario}"] = scores["temporal_dice"]
+                
+            if "temporal_consistency_iou" in scores:
                 log_dict[f"Metric_Temporal_Var/TC_IoU/Stress_{scenario}"] = scores["temporal_consistency_iou"]
+                
         wandb.log(log_dict)
 
     def log_test_metrics(self, metrics: dict):
@@ -64,7 +70,7 @@ class WandbLogger:
 
         test_log_dict = {}
 
-        columns = ["Scenario", "Dice", "HD95", "IoU", "Inference_FPS", "Drop (%)"]
+        columns = ["Scenario", "Dice", "HD95", "IoU", "Temporal_IoU", "Inference_FPS", "Drop (%)"]
         table = wandb.Table(columns=columns)
 
         baseline = metrics.get("baseline", {})
@@ -83,6 +89,7 @@ class WandbLogger:
             test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores.get("dice", 0.0)
             test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores.get("hd95", 0.0)
             test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores.get("iou", 0.0)
+            test_log_dict[f"Test_Stress_Temporal_IoU/{scenario}"] = scores.get("temporal_iou", 0.0)
             test_log_dict[f"Test_Stress_Drop/{scenario}"] = scores.get("drop", drop_val / 100)
 
             table.add_data(
@@ -90,6 +97,7 @@ class WandbLogger:
                 round(scores.get("dice", 0.0), 4),
                 round(scores.get("hd95", 0.0), 2),
                 round(scores.get("iou", 0.0), 4),
+                round(scores.get("temporal_iou", 0.0), 4),
                 round(scores.get("inference_fps", 0.0), 2),
                 round(drop_val, 2)
             )
@@ -106,6 +114,14 @@ class WandbLogger:
             1: "Hemorrhage"
         }
 
+        if images.ndim == 5:
+            images = images.flatten(0, 1)
+            labels = labels.flatten(0, 1)
+            preds = preds.flatten(0, 1)
+
+        if images.shape[1] > 3:
+            images = images[:, :3, ...]
+
         columns = ["Epoch", "Scenario", "Sample ID", "Segmentation Overlay"]
         qualitative_table = wandb.Table(columns=columns)
 
@@ -114,7 +130,6 @@ class WandbLogger:
         for i in range(n_samples):
             img = images[i].detach().cpu().float().numpy()
 
-            # CHW -> HWC
             if img.shape[0] in [1, 3]:
                 img = np.transpose(img, (1, 2, 0))
 

@@ -179,12 +179,10 @@ class BenchmarkEngine:
             if getattr(self, "temporal_mode", None) == TemporalMode.LATE_FUSION:
                 T = self.cfg.data.sequence_length
                 dummy_input = torch.randn(1, T, 3, H, W, device=self.device)
+            elif getattr(self, "temporal_mode", None) == TemporalMode.EARLY_FUSION:
+                dummy_input = torch.randn(1, 4, H, W, device=self.device)
             else:
                 dummy_input = torch.randn(1, 3, H, W, device=self.device)
-
-            with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                for _ in range(5):
-                    _ = self.model(dummy_input)
             
             # Scalda solo il modello, non il metodo _prepare_inputs
             with torch.cuda.amp.autocast(enabled=self.scaler is not None):
