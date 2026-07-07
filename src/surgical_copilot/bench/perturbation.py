@@ -274,6 +274,23 @@ class PerturbationFactory:
         """Simulate specular reflections by adding bright, localized highlights that mimic the appearance of light reflecting off wet or shiny surfaces."""
         return RandSpecularReflectiond(keys="current_image", prob=p, intensity=intensity)
 
+
+class Force2DTransformd(MapTransform):
+    """
+    Trasformatore che normalizza i dati a (C, H, W) prima del crop,
+    indipendentemente da quante dimensioni extra (Z o T) siano presenti.
+    """
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            x = d[key]
+            # Se è (T, C, H, W) o (C, Z, H, W) -> riduciamo a (C, H, W)
+            if x.ndim == 4:
+                # Prendiamo il frame centrale (T//2) o il primo (0) per normalizzare
+                d[key] = x[0] if x.shape[0] < x.shape[1] else x[:, 0, :, :]
+            # Se è già (C, H, W) o (1, H, W) non facciamo nulla
+        return d
+
 class PerturbationPipelines:
 
     KEY_MAPS = {
@@ -282,61 +299,54 @@ class PerturbationPipelines:
         "late_fusion": ["current_image", "current_label"]
     }
 
+    
+
     @staticmethod
     def get_train_pipeline(mode="none", is_sequential=False):
-        
         dynamic_keys = PerturbationPipelines.KEY_MAPS[mode]
-        
-        spatial = Compose([
-          # Lambdad(
-          #     keys=dynamic_keys,
-          #     func=lambda x: x[0, :, :, :] if x.ndim == 4 else x  # Se è 4D, prendi solo il primo elemento della prima dimensione (Canale)
-          # ),
-            RandSpatialCropd(
-                keys=dynamic_keys,
-                roi_size=(320, 320),
-                random_size=False
-            ),
+
+        spatial_list = [
+            Force2DTransformd(keys=dynamic_keys),
+            RandSpatialCropd(keys=dynamic_keys, roi_size=(320, 320), random_size=False),
             RandCropByPosNegLabeld(
                 keys=dynamic_keys,
                 label_key="current_label",
                 spatial_size=(320, 320),
-                pos=2,
-                neg=1,
-                num_samples=2
+                pos=2, neg=1, num_samples=2
             ),
             RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=0),
             RandFlipd(keys=dynamic_keys, prob=0.5, spatial_axis=1),
             RandRotated(
-                keys=dynamic_keys,
-                prob=0.3,
-                range_x=0.4,
+                keys=dynamic_keys, 
+                prob=0.3, 
+                range_x=0.4, 
                 mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)
             ),
             Rand2DElasticd(
-                keys=dynamic_keys,
-                prob=0.2,
-                spacing=(20, 20),
-                magnitude_range=(1, 2),
+                keys=dynamic_keys, 
+                prob=0.2, 
+                spacing=(20, 20), 
+                magnitude_range=(1, 2), 
                 mode=["bilinear"] + ["nearest"] * (len(dynamic_keys) - 1)
             )
-        ])
+        ]
 
-        appearance = Compose([
+        appearance_list = [
             RandAdjustContrastd(keys=["current_image"], prob=0.5, gamma=(0.5, 1.5)),
             PerturbationFactory.gaussian_noise(),
             PerturbationFactory.gaussian_blur(),
             PerturbationFactory.specular(),
             PerturbationFactory.surgical_smoke(),
             PerturbationFactory.intensity_shift(),
-        ])
+        ]
 
+    
         if not is_sequential:
             return Compose(spatial.transforms + appearance.transforms)
 
         return (
-            spatial,
-            appearance,
+            Compose(spatial_list),
+            Compose(appearance_list),
         )
 
     @staticmethod
