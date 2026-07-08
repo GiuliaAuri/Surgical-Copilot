@@ -342,7 +342,7 @@ class PerturbationPipelines:
 
     
         if not is_sequential:
-            return Compose(spatial.transforms + appearance.transforms)
+            return Compose(spatial_list + appearance_list)
 
         return (
             Compose(spatial_list),
