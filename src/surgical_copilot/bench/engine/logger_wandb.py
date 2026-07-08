@@ -64,44 +64,52 @@ class WandbLogger:
         wandb.log(log_dict)
 
     def log_test_metrics(self, metrics: dict):
-
         if not self.is_active:
             return
 
         test_log_dict = {}
 
-        columns = ["Scenario", "Dice", "HD95", "IoU", "Temporal_IoU", "Inference_FPS", "Drop (%)"]
+        # 1. Definiamo le colonne dinamicamente
+        columns = ["Scenario", "Dice", "HD95", "IoU", "Inference_FPS", "Drop (%)"]
+        
+        # Controlliamo se ci sono metriche temporali in baseline
+        has_temporal = "temporal_iou" in metrics.get("baseline", {})
+        if has_temporal:
+            columns.insert(4, "Temporal_IoU")
+
         table = wandb.Table(columns=columns)
 
-        baseline = metrics.get("baseline", {})
-        table.add_data(
-            "baseline (clean)",
-            round(baseline.get("dice", 0.0), 4),
-            round(baseline.get("hd95", 0.0), 2),
-            round(baseline.get("iou", 0.0), 4),
-            round(baseline.get("temporal_iou", 0.0), 4),
-            round(baseline.get("inference_fps", 0.0), 2),
-            0.0
-        )
-
-        for scenario, scores in metrics.get("stress", {}).items():
-            drop_val = scores.get("drop_percent", scores.get("drop", 0.0) * 100)
-            
-            test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores.get("dice", 0.0)
-            test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores.get("hd95", 0.0)
-            test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores.get("iou", 0.0)
-            test_log_dict[f"Test_Stress_Temporal_IoU/{scenario}"] = scores.get("temporal_iou", 0.0)
-            test_log_dict[f"Test_Stress_Drop/{scenario}"] = scores.get("drop", drop_val / 100)
-
-            table.add_data(
+        # 2. Helper per creare le righe dinamicamente
+        def get_row(scenario, scores):
+            row = [
                 scenario,
                 round(scores.get("dice", 0.0), 4),
                 round(scores.get("hd95", 0.0), 2),
-                round(scores.get("iou", 0.0), 4),
-                round(scores.get("temporal_iou", 0.0), 4),
+                round(scores.get("iou", 0.0), 4)
+            ]
+            if has_temporal:
+                row.append(round(scores.get("temporal_iou", 0.0), 4))
+            
+            row.extend([
                 round(scores.get("inference_fps", 0.0), 2),
-                round(drop_val, 2)
-            )
+                round(scores.get("drop_percent", scores.get("drop", 0.0) * 100), 2)
+            ])
+            return row
+
+        # Baseline
+        baseline = metrics.get("baseline", {})
+        table.add_data(*get_row("baseline (clean)", baseline))
+
+        # Stress Scenarios
+        for scenario, scores in metrics.get("stress", {}).items():
+            # Log nel dizionario (già esistente)
+            test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores.get("dice", 0.0)
+            test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores.get("hd95", 0.0)
+            test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores.get("iou", 0.0)
+            if has_temporal:
+                test_log_dict[f"Test_Stress_Temporal_IoU/{scenario}"] = scores.get("temporal_iou", 0.0)
+            
+            table.add_data(*get_row(scenario, scores))
 
         test_log_dict["Test/Performance_Table"] = table
         wandb.log(test_log_dict)
