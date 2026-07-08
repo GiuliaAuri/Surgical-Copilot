@@ -79,6 +79,7 @@ class WandbLogger:
             round(baseline.get("dice", 0.0), 4),
             round(baseline.get("hd95", 0.0), 2),
             round(baseline.get("iou", 0.0), 4),
+            round(baseline.get("temporal_iou", 0.0), 4),
             round(baseline.get("inference_fps", 0.0), 2),
             0.0
         )

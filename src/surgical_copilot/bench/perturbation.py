@@ -17,6 +17,8 @@ from monai.transforms import (
     Lambdad,
 )
 
+import random
+
 
 class VideoRandCropByPosNegLabeld(MapTransform):
     """

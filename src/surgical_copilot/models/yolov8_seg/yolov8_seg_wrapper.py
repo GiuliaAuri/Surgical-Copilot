@@ -2,8 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from surgical_copilot.models.yolov8_seg.yolov8_seg import YOLOv8Segmenter 
-from surgical_copilot.models.conv_gru import ConvGRU
-from surgical_copilot.models.conv_lstm import ConvLSTM
+from surgical_copilot.models.conv_gru import ConvGRU, ConvGRUCell
+from surgical_copilot.models.conv_lstm import ConvLSTM, ConvLSTMCell
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("YOLOLateFusion")
+
 
 class CustomYOLOSemantic(nn.Module):
     def __init__(self, in_channels=3, num_classes=1, num_masks=32,**kwargs):
@@ -141,44 +147,46 @@ class YOLOLateFusionTemporalSequential(nn.Module):
         
 
     def forward(self, x, states=None):
-
         assert x.ndim == 5, "Expected input x to be a 5D tensor of shape (B, T, C, H, W)"
 
         B, T, C, H, W = x.shape
+        print(f"Input shape: {x.shape}")
 
-        x = x.view(B * T, C, H, W)  # Flatten the batch and time dimensions
-
-        # protos: (B*T, K, h, w)
-        # coeffs: (B*T, K)
-
+        x = x.view(B * T, C, H, W)
         classes, coeffs, protos = self.yolo(x)
+        
+        print(f"YOLO output - Coeffs: {coeffs.shape}, Protos: {protos.shape}")
 
-        K = coeffs.shape[1]
-        h, w = protos.shape[-2:]
+        _, K, hc, wc = coeffs.shape
+        _, _, hp, wp = protos.shape
 
-        # coeffs are the weights of the combination of the 
-        # K prototype masks for each frame.
-        coeffs = coeffs.reshape(B, T, K, 1, 1)
+        coeffs = coeffs.reshape(B, T, K, hc, wc)
+        protos = protos.reshape(B, T, K, hp, wp)
 
-        # protos are the prototype masks that contain
-        # the spatial information for each of the K masks.
-        protos = protos.reshape(B, T, K, h, w)
+        # Temporal refinement
+        coeffs, states = self.temporal(coeffs, states)
 
-        coeffs, states = self.temporal(coeffs, states)  # (B, T, K, 1, 1)
+        # Broadcast su spazio
+        coeffs = F.interpolate(
+            coeffs.flatten(0, 1),
+            size=(hp, wp),
+            mode="bilinear",
+            align_corners=False,
+        ).reshape(B, T, K, hp, wp)
+        
+        print(f"Resized Coeffs: {coeffs.shape}")
 
-        # broadcast su spazio
-        coeffs = coeffs.expand(-1, -1, -1, h, w)
-
-        mask_logits = (coeffs * protos).sum(dim=2)  # (B, T, h, w)
+        mask_logits = (coeffs * protos).sum(dim=2)
+        print(f"Merged Mask Logits: {mask_logits.shape}")
 
         mask_logits = F.interpolate(
-            mask_logits.flatten(0,1).unsqueeze(1),
+            mask_logits.flatten(0, 1).unsqueeze(1),
             size=(H, W),
             mode="bilinear",
             align_corners=False,
         )
+        
+        output = mask_logits.reshape(B, T, 1, H, W)
+        print(f"Final output shape: {output.shape}")
 
-        return (
-            mask_logits.reshape(B,T,1,H,W),
-            states
-        )
+        return output, states
