@@ -52,7 +52,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self.last_x = None  # Store the last input for temporal metrics
 
         self.temporal_metrics = {
-            "consistency": TemporalConsistencyMetric(device=self.device),
+            "consistency": None,
             "temporal_iou": TemporalIoU(
                     threshold=0.5,
                     from_logits=False,   
@@ -72,13 +72,18 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self.recurrent_state = None
         self.mask_prev = None
 
-        self.temporal_metrics["consistency"].reset()
-        self.temporal_metrics["temporal_iou"].reset_sequence()
+        for key, metric in self.temporal_metrics.items():
+            if metric is not None: 
+                metric.reset()
+            if key == "temporal_iou":
+                metric.reset_sequence()
+
 
     def _reset_temporal_metrics(self):
         
         for metric in self.temporal_metrics.values():
-            metric.reset()
+            if metric is not None:
+                metric.reset()
     
     def _reset_all(self):
         self._reset_temporal_state()
@@ -244,7 +249,9 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             super()._update_metrics(preds, labels)
 
             self.temporal_metrics["consistency"](preds, labels, self.last_x)
-            self.temporal_metrics["temporal_iou"](preds)
+            if self.temporal_metrics["temporal_iou"] is not None:
+                self.temporal_metrics["temporal_iou"](preds)
+            
             return
 
         B, T = preds.shape[:2]
@@ -265,7 +272,7 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         
         temp = {
             **self.temporal_metrics["consistency"].aggregate(),
-            **self.temporal_metrics["temporal_iou"].aggregate()
+           # **self.temporal_metrics["temporal_iou"].aggregate()
         }
         metrics["baseline"].update(temp)
         
@@ -274,6 +281,9 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
     def _test(self):
         self._reset_all()
         metrics = super()._test()
+
+        if self.temporal_metrics["consistency"] is None:
+            self.temporal_metrics["consistency"] = TemporalConsistencyMetric(device=self.device)
         
         temp = {
             **self.temporal_metrics["consistency"].aggregate(),
