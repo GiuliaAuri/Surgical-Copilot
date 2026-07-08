@@ -247,8 +247,9 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         if self.temporal_mode == TemporalMode.EARLY_FUSION:
 
             super()._update_metrics(preds, labels)
-
-            self.temporal_metrics["consistency"](preds, labels, self.last_x)
+            if self.temporal_metrics["consistency"] is not None:
+                self.temporal_metrics["consistency"](preds, labels, self.last_x)
+            
             if self.temporal_metrics["temporal_iou"] is not None:
                 self.temporal_metrics["temporal_iou"](preds)
             
@@ -269,11 +270,17 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self._reset_all()
 
         metrics = super()._validate(epoch)
-        
-        temp = {
-            **self.temporal_metrics["consistency"].aggregate(),
-           # **self.temporal_metrics["temporal_iou"].aggregate()
-        }
+
+        if self.temporal_metrics["consistency"] is None:
+            self.temporal_metrics["consistency"] = TemporalConsistencyMetric(device=self.device)
+        temp = { }
+
+        if self.temporal_metrics["consistency"] is not None:
+            temp.update(self.temporal_metrics["consistency"].aggregate())
+        if self.temporal_metrics["temporal_iou"] is not None:
+            temp.update(self.temporal_metrics["temporal_iou"].aggregate())
+
+            
         metrics["baseline"].update(temp)
         
         return metrics
