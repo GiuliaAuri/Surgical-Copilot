@@ -259,8 +259,19 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
 
         preds_flat = preds.reshape(B * T, *preds.shape[2:])
         labels_flat = labels.reshape(B * T, *labels.shape[2:])
-
         super()._update_metrics(preds_flat, labels_flat)
+
+        for t in range(T):
+            preds_t = preds[:, t, ...]
+            labels_t = labels[:, t, ...] if labels is not None else None
+            images_t = self.last_x[:, t, ...]
+            
+            if self.temporal_metrics["consistency"] is not None:
+                self.temporal_metrics["consistency"](preds_t, labels_t, images_t)
+            
+            if self.temporal_metrics["temporal_iou"] is not None:
+                is_first = (t == 0)
+                self.temporal_metrics["temporal_iou"](preds_t, is_first_frame=is_first)
 
     def _train(self):
         self._reset_all()

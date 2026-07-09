@@ -37,16 +37,8 @@ class WandbLogger:
         if "temporal_iou" in metrics.get("baseline", {}):
             log_dict["Metric_Temporal_IoU/Baseline"] = metrics["baseline"]["temporal_iou"]
 
-        baseline = metrics.get("baseline", {})
-
-        if "temporal_consistency" in baseline:
-            log_dict["Metric_Temporal_Consistency/IoU"] = baseline.get("temporal_consistency", 0.0)
-
-        if "consistency" in baseline:
-            log_dict.update({
-                "Metric_Temporal_Consistency/IoU": baseline["consistency"].get("temporal_iou", 0.0),
-                "Metric_Temporal_Consistency/Dice": baseline["consistency"].get("temporal_dice", 0.0),
-            })
+        if "temporal_consistency" in metrics.get("baseline", {}):
+            log_dict["Metric_Temporal_Consistency/IoU"] = metrics["baseline"]["temporal_consistency"]
 
         #if "interframe" in metrics.get("baseline", {}):
         #    log_dict.update({
@@ -63,8 +55,8 @@ class WandbLogger:
                 log_dict[f"Metric_Temporal_IoU/Stress_{scenario}"] = scores["temporal_iou"]
                 log_dict[f"Metric_Temporal_Var_IoU/Stress_{scenario}"] = scores["temporal_iou"]
                 
-            if "temporal_consistency_iou" in scores:
-                log_dict[f"Metric_Temporal_Var/TC_IoU/Stress_{scenario}"] = scores["temporal_consistency_iou"]
+            if "temporal_consistency" in scores:
+                log_dict[f"Metric_Temporal_Var/TC_IoU/Stress_{scenario}"] = scores["temporal_consistency"]
                 
         wandb.log(log_dict)
 
