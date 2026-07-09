@@ -66,6 +66,7 @@ unet_resnet18_early_fusion_warmup_on:
 ### WARM-UP OFF
 
 unet_early_fusion_warmup_off:
+  
   architecture:
     _target_: monai.networks.nets.UNet
     spatial_dims: 2

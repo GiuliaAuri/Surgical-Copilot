@@ -5,9 +5,13 @@ import wandb
 from tqdm import tqdm
 from pathlib import Path
 
-from monai.metrics.meandice import DiceMetric
-from monai.metrics.hausdorff_distance import HausdorffDistanceMetric
-from monai.metrics.meaniou import MeanIoU
+#from monai.metrics.meandice import DiceMetric
+#from monai.metrics.hausdorff_distance import HausdorffDistanceMetric
+#from monai.metrics.meaniou import MeanIoU
+#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
+#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_iou import TemporalIoU
+from src.surgical_copilot.bench.metrics.metrics_manager import MetricManager
+
 from monai.transforms.post.array import Activations, AsDiscrete
 from monai.transforms.compose import Compose
 from monai.transforms.post.array import KeepLargestConnectedComponent
@@ -15,6 +19,7 @@ from monai.transforms.post.array import KeepLargestConnectedComponent
 from src.surgical_copilot.bench.perturbation import PerturbationPipelines
 from src.surgical_copilot.bench.engine.logger_wandb import WandbLogger
 from src.surgical_copilot.bench.engine.temporal_mode import TemporalMode
+
 
 
 class BenchmarkEngine:
@@ -53,9 +58,16 @@ class BenchmarkEngine:
 
         self.accumulation_steps = self.cfg.trainer.trainer.get("accumulation_steps", 4)
 
-        self.dice_metric = DiceMetric(reduction="mean")
-        self.hd95_metric = HausdorffDistanceMetric(percentile=95)
-        self.iou = MeanIoU(reduction="mean")
+        #self.dice_metric = DiceMetric(reduction="mean")
+        #self.hd95_metric = HausdorffDistanceMetric(percentile=95)
+        #self.iou = MeanIoU(reduction="mean")
+#
+        #self.previous_sequence = None
+#
+        #self.temporal_consistency = TemporalConsistencyMetric(device=self.device)
+        #self.temporal_iou = TemporalIoU(threshold=0.5, from_logits=False, eps=1e-6)
+
+        self.metrics = MetricManager(device=self.device)
 
         self.post_pred = Compose([
             Activations(sigmoid=True),
@@ -76,10 +88,37 @@ class BenchmarkEngine:
         
         self.logger._print_model_info(model, device)
 
+    #def _reset_metrics_state(self):
+    #    self.dice_metric.reset()
+    #    self.hd95_metric.reset()
+    #    self.iou.reset()
+    #    self.temporal_consistency.reset()
+    #    self.temporal_iou.reset()
+    #    self.temporal_iou.reset_sequence()
+
+    #def _get_current_metrics_dict(self):
+    #    return {
+    #        "dice": self.dice_metric.aggregate().item(),
+    #        "hd95": self.hd95_metric.aggregate().item(),
+    #        "iou": self.iou.aggregate().item(),
+    #        "temporal_consistency": self.temporal_consistency.aggregate().get("temporal_consistency", 0.0),
+    #        "temporal_iou": self.temporal_iou.aggregate().get("temporal_iou", 0.0)
+    #    }
+
     def _prepare_inputs(self, batch):
+            
         x = batch["current_image"].to(self.device)
         y = batch["current_label"].to(self.device)
+            
         return x, y
+    
+    def _get_sequence_info(self, batch):
+
+        is_first_frame = batch["is_first_frame"][0]
+        sequence_id = batch["patient_id"][0]
+
+        return is_first_frame, sequence_id
+        
 
     def _forward_step(self, x, y):
         logits = self.model(x)
@@ -125,10 +164,29 @@ class BenchmarkEngine:
 
         return preds, labels
 
-    def _update_metrics(self, preds, labels):
-        self.dice_metric(y_pred=preds, y=labels)
-        self.hd95_metric(y_pred=preds, y=labels)
-        self.iou(y_pred=preds, y=labels)
+    def _update_metrics(
+        self,
+        preds,
+        labels,
+        images,
+        is_first_frame,
+        sequence_id
+    ):
+
+        self.metrics.update_spatial(
+            preds,
+            labels
+        )
+
+        rgb = images[:, :3] if images.shape[1] > 3 else images
+
+        self.metrics.update_temporal(
+            preds,
+            labels,
+            rgb,
+            is_first_frame,
+            sequence_id
+        )
 
     def _train(self):
 
@@ -190,9 +248,8 @@ class BenchmarkEngine:
                     _ = self.model(dummy_input)
 
         with torch.inference_mode():
-            self.dice_metric.reset()
-            self.hd95_metric.reset()
-            self.iou.reset()
+
+            self.metrics.reset()
 
             total_model_time, total_images = 0.0, 0
             val_losses = []
@@ -204,6 +261,7 @@ class BenchmarkEngine:
                 batch = clean_pipeline(batch)
 
                 x, y = self._prepare_inputs(batch)
+                is_first, seq_id = self._get_sequence_info(batch)
 
                 # Sincronizzazione per FPS
                 if self.device.type == "cuda":
@@ -225,7 +283,7 @@ class BenchmarkEngine:
                 val_losses.append(loss.item() * self.accumulation_steps)
                     
                 preds, labels = self._post_processing(logits, y)
-                self._update_metrics(preds, labels)
+                self._update_metrics(preds, labels, x, is_first_frame=is_first, sequence_id=seq_id)
 
                 # Log visual results 
                 if not logged_visuals:
@@ -242,9 +300,7 @@ class BenchmarkEngine:
                 total_images += x.shape[0]
             
             metrics["inference_fps"] = total_images / max(total_model_time, 1e-8)
-            metrics["baseline"]["dice"] = self.dice_metric.aggregate().item()
-            metrics["baseline"]["hd95"] = self.hd95_metric.aggregate().item()
-            metrics["baseline"]["iou"] = self.iou.aggregate().item()
+            metrics["baseline"] = self.metrics.compute()
             metrics["val_loss"] = float(np.mean(val_losses))
 
         return metrics
@@ -270,9 +326,7 @@ class BenchmarkEngine:
 
             for scenario_name, pipeline in eval_scenarios.items():
 
-                self.dice_metric.reset()
-                self.hd95_metric.reset()
-                self.iou.reset()
+                self.metrics.reset()
 
                 logged_visuals = False
 
@@ -288,6 +342,7 @@ class BenchmarkEngine:
                     batch = pipeline(batch)
 
                     x, y = self._prepare_inputs(batch)
+                    first_frame, seq_id = self._get_sequence_info(batch) 
 
                     if self.device.type == "cuda":
                         torch.cuda.synchronize()
@@ -307,7 +362,8 @@ class BenchmarkEngine:
                     
                     # Post-processing e metriche
                     preds, labels = self._post_processing(main_logits, y)
-                    self._update_metrics(preds, labels)
+                    
+                    self._update_metrics(preds, labels, x, is_first_frame=first_frame, sequence_id=seq_id)
 
                     if not logged_visuals:
                         self.logger.log_qualitative_masks(
@@ -320,12 +376,13 @@ class BenchmarkEngine:
 
                         logged_visuals = True
 
-                    scores = {
-                        "dice": self.dice_metric.aggregate().item(),
-                        "hd95": self.hd95_metric.aggregate().item(),
-                        "iou": self.iou.aggregate().item(),
-                        "inference_fps": total_images / max(total_model_time, 1e-8)
-                    }
+                    scores = self.metrics.compute()
+
+                    scores["inference_fps"] = (
+                        total_images /
+                        max(total_model_time, 1e-8)
+                    )
+
                     
                     if scenario_name == "clean":
                         metrics["baseline"] = scores

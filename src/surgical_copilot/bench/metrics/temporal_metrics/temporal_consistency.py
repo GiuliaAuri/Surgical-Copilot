@@ -3,73 +3,157 @@ import torch
 import torch.nn.functional as F
 from torchvision.models.optical_flow import raft_small, Raft_Small_Weights
 
+
 class TemporalConsistencyMetric:
+
     def __init__(self, device):
         self.device = device
-        # Carichiamo RAFT come suggerito dal paper per calcolare il warping
+
         weights = Raft_Small_Weights.DEFAULT
         self.transforms = weights.transforms()
-        self.raft = raft_small(weights=weights).to(self.device).eval()
-        for param in self.raft.parameters():
-            param.requires_grad = False
+
+        self.raft = raft_small(weights=weights).to(device).eval()
+        for p in self.raft.parameters():
+            p.requires_grad = False
+
         self.reset()
 
     def reset(self):
         self.prev_pred = None
         self.prev_image = None
         self.ious = []
-        
+
+    def _compute_pair(
+        self,
+        prev_pred,
+        curr_pred,
+        prev_img,
+        curr_img,
+    ):
+        """
+        prev_pred : (B,1,H,W)
+        curr_pred : (B,1,H,W)
+
+        prev_img : (B,C,H,W)
+        curr_img : (B,C,H,W)
+        """
+
+        # Early Fusion -> mantieni solo RGB
+        if prev_img.shape[1] > 3:
+            prev_img = prev_img[:, :3]
+
+        if curr_img.shape[1] > 3:
+            curr_img = curr_img[:, :3]
+
+        prev_pred = (prev_pred > 0.5).float()
+        curr_pred = (curr_pred > 0.5).float()
+
+        prev_raft, curr_raft = self.transforms(prev_img, curr_img)
+
+        with torch.no_grad():
+            flow = self.raft(prev_raft, curr_raft)[-1]
+
+        b, _, h, w = prev_img.shape
+
+        yy, xx = torch.meshgrid(
+            torch.arange(h, device=self.device),
+            torch.arange(w, device=self.device),
+            indexing="ij",
+        )
+
+        grid = torch.stack((xx, yy), dim=0).float()
+        grid = grid.unsqueeze(0).repeat(b, 1, 1, 1)
+
+        warped_grid = grid + flow
+
+        warped_grid[:, 0] = 2.0 * warped_grid[:, 0] / (w - 1) - 1.0
+        warped_grid[:, 1] = 2.0 * warped_grid[:, 1] / (h - 1) - 1.0
+
+        warped_grid = warped_grid.permute(0, 2, 3, 1)
+
+        warped_prev = F.grid_sample(
+            prev_pred,
+            warped_grid,
+            mode="bilinear",
+            padding_mode="border",
+            align_corners=True,
+        )
+
+        warped_prev = (warped_prev > 0.5).float()
+
+        inter = (warped_prev * curr_pred).sum(dim=(-2, -1))
+        union = (warped_prev + curr_pred).sum(dim=(-2, -1)) - inter
+
+        tc = inter / (union + 1e-6)
+
+        self.ious.extend(tc.cpu().numpy().tolist())
+
     def __call__(self, preds, labels, images):
-        """
-        preds: (B, 1, H, W) - Predizione attuale al tempo t
-        images: (B, C, H, W) - Immagine attuale al tempo t (C può essere 3 o 4)
-        """
-        # 1. ISOLAMENTO CANALI RGB:
-        # Se siamo in EARLY_FUSION (C=4), prendiamo solo i primi 3 canali (RGB).
-        # Se siamo in modalità standard (C=3), prendiamo tutto.
-        if images.shape[1] > 3:
-            img_to_raft = images[:, :3, :, :]
-        else:
-            img_to_raft = images
 
-        p_bin = (preds > 0.5).float()
+        # ==========================================================
+        # BASELINE / EARLY FUSION
+        # images : (B,C,H,W)
+        # ==========================================================
 
-        # Usiamo img_to_raft ovunque d'ora in avanti
-        if self.prev_image is not None and self.prev_pred is not None:
-            # Trasformiamo solo la parte RGB
-            prev_raft, curr_raft = self.transforms(self.prev_image, img_to_raft)
+        if images.ndim == 4:
 
-            # 2. Calcolo Optical Flow (RAFT)
-            with torch.no_grad():
-                flow = self.raft(prev_raft, curr_raft)[-1]
+            if self.prev_image is not None:
+                self._compute_pair(
+                    self.prev_pred,
+                    preds,
+                    self.prev_image,
+                    images,
+                )
 
-            # 3. Warping della predizione precedente
-            b, _, h, w = images.shape
-            grid_y, grid_x = torch.meshgrid(torch.arange(h), torch.arange(w), indexing='ij')
-            grid = torch.stack([grid_x, grid_y], dim=0).to(self.device).float()
-            grid = grid.unsqueeze(0).repeat(b, 1, 1, 1)
+            self.prev_pred = preds.detach()
+            self.prev_image = images.detach()
 
-            warped_grid = grid + flow
-            
-            # Normalizzazione per grid_sample
-            warped_grid[:, 0, :, :] = 2.0 * warped_grid[:, 0, :, :] / (w - 1) - 1.0
-            warped_grid[:, 1, :, :] = 2.0 * warped_grid[:, 1, :, :] / (h - 1) - 1.0
-            warped_grid = warped_grid.permute(0, 2, 3, 1)
+            return
 
-            # Warp
-            warped_prev_pred = F.grid_sample(self.prev_pred, warped_grid, align_corners=True, padding_mode='border')
-            warped_prev_pred = (warped_prev_pred > 0.5).float()
+        # ==========================================================
+        # LATE FUSION
+        # images : (B,T,C,H,W)
+        # ==========================================================
 
-            # 4. Calcolo IoU
-            inter = (warped_prev_pred * p_bin).sum(dim=(-2, -1))
-            union = (warped_prev_pred + p_bin).sum(dim=(-2, -1)) - inter
-            
-            tc_iou = inter / (union + 1e-6)
-            self.ious.extend(tc_iou.cpu().tolist()) # Tolto .mean(dim=0) perché vogliamo la media finale dopo
+        if images.ndim == 5:
 
-        # Update stato: salviamo sempre la versione pulita (3 canali)
-        self.prev_pred = p_bin.detach()
-        self.prev_image = img_to_raft.detach()
+            B, T, C, H, W = images.shape
+
+            # collega con la sequenza precedente
+            if self.prev_image is not None:
+
+                self._compute_pair(
+                    self.prev_pred,
+                    preds[:, 0],
+                    self.prev_image,
+                    images[:, 0],
+                )
+
+            # confronti interni alla sequenza
+            for t in range(T - 1):
+
+                self._compute_pair(
+                    preds[:, t],
+                    preds[:, t + 1],
+                    images[:, t],
+                    images[:, t + 1],
+                )
+
+            # salva ultimo frame
+            self.prev_pred = preds[:, -1].detach()
+            self.prev_image = images[:, -1].detach()
+
+            return
+
+        raise ValueError(
+            f"Unsupported image shape {images.shape}"
+        )
 
     def aggregate(self):
-        return {"temporal_consistency": float(np.mean(self.ious)) if self.ious else 0.0}
+
+        if len(self.ious) == 0:
+            return {"temporal_consistency": 0.0}
+
+        return {
+            "temporal_consistency": float(np.mean(self.ious))
+        }

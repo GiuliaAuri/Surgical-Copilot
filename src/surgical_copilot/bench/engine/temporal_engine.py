@@ -3,8 +3,8 @@ import numpy as np
 
 from src.surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
 from src.surgical_copilot.bench.engine.temporal_mode import TemporalMode
-from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
-from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_iou import TemporalIoU
+#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
+#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_iou import TemporalIoU
 
 class TemporalBenchmarkEngine(BenchmarkEngine):
 
@@ -51,14 +51,14 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self._current_patient = None
         self.last_x = None  # Store the last input for temporal metrics
 
-        self.temporal_metrics = {
-            "consistency": None,
-            "temporal_iou": TemporalIoU(
-                    threshold=0.5,
-                    from_logits=False,   
-                    eps=1e-6
-                )
-        }
+        #self.temporal_metrics = {
+        #    "consistency": None,
+        #    "temporal_iou": TemporalIoU(
+        #            threshold=0.5,
+        #            from_logits=False,   
+        #            eps=1e-6
+        #        )
+        #}
 
     def _check_patient(self, batch):
 
@@ -68,26 +68,30 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             self.recurrent_state = None
             self._current_patient = patient
     
+    #def _reset_temporal_state(self):
+    #    self.recurrent_state = None
+    #    self.mask_prev = None
+    #
+    #    for key, metric in self.temporal_metrics.items():
+    #        if metric is not None: 
+    #            metric.reset()
+    #        if key == "temporal_iou":
+    #            metric.reset_sequence()
+
     def _reset_temporal_state(self):
         self.recurrent_state = None
         self.mask_prev = None
-
-        for key, metric in self.temporal_metrics.items():
-            if metric is not None: 
-                metric.reset()
-            if key == "temporal_iou":
-                metric.reset_sequence()
+        self._current_patient = None
 
 
-    def _reset_temporal_metrics(self):
-        
-        for metric in self.temporal_metrics.values():
-            if metric is not None:
-                metric.reset()
+    #def _reset_temporal_metrics(self):
+    #    for metric in self.temporal_metrics.values():
+    #        if metric is not None:
+    #            metric.reset()
     
-    def _reset_all(self):
-        self._reset_temporal_state()
-        self._reset_temporal_metrics()
+    #def _reset_all(self):
+    #    self._reset_temporal_state()
+    #    self._reset_temporal_metrics()
 
     def _prepare_inputs(self, batch):
 
@@ -242,73 +246,45 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
-    def _update_metrics(self, preds, labels):
+    def _update_metrics(self, preds, labels, images, is_first_frame, sequence_id):
     
         if self.temporal_mode == TemporalMode.EARLY_FUSION:
 
-            super()._update_metrics(preds, labels)
-            if self.temporal_metrics["consistency"] is not None:
-                self.temporal_metrics["consistency"](preds, labels, self.last_x)
-            
-            if self.temporal_metrics["temporal_iou"] is not None:
-                self.temporal_metrics["temporal_iou"](preds)
-            
+            super()._update_metrics(
+                preds,
+                labels,
+                images,
+                is_first_frame=is_first_frame,
+                sequence_id=sequence_id
+            )
             return
-
+        
         B, T = preds.shape[:2]
-
         preds_flat = preds.reshape(B * T, *preds.shape[2:])
         labels_flat = labels.reshape(B * T, *labels.shape[2:])
-        super()._update_metrics(preds_flat, labels_flat)
-
+        self.metrics.update_spatial(
+            preds_flat,
+            labels_flat
+        )
+        
         for t in range(T):
-            preds_t = preds[:, t, ...]
-            labels_t = labels[:, t, ...] if labels is not None else None
-            images_t = self.last_x[:, t, ...]
-            
-            if self.temporal_metrics["consistency"] is not None:
-                self.temporal_metrics["consistency"](preds_t, labels_t, images_t)
-            
-            if self.temporal_metrics["temporal_iou"] is not None:
-                is_first = (t == 0)
-                self.temporal_metrics["temporal_iou"](preds_t, is_first_frame=is_first)
+            super()._update_metrics(
+                preds[:,t],
+                labels[:,t],
+                self.last_x[:,t],
+                is_first_frame=(t==0),
+                sequence_id=sequence_id
+            )
 
     def _train(self):
-        self._reset_all()
+        self._reset_temporal_state()
         return super()._train()
-
+    
     def _validate(self, epoch: int):
-        self._reset_all()
-
-        metrics = super()._validate(epoch)
-
-        if self.temporal_metrics["consistency"] is None:
-            self.temporal_metrics["consistency"] = TemporalConsistencyMetric(device=self.device)
-        temp = { }
-
-        if self.temporal_metrics["consistency"] is not None:
-            temp.update(self.temporal_metrics["consistency"].aggregate())
-        if self.temporal_metrics["temporal_iou"] is not None:
-            temp.update(self.temporal_metrics["temporal_iou"].aggregate())
-
-            
-        metrics["baseline"].update(temp)
-        
-        return metrics
+        self._reset_temporal_state()
+        return super()._validate(epoch)
 
     def _test(self):
-        self._reset_all()
-        metrics = super()._test()
-
-        if self.temporal_metrics["consistency"] is None:
-            self.temporal_metrics["consistency"] = TemporalConsistencyMetric(device=self.device)
-        
-        temp = {
-            **self.temporal_metrics["consistency"].aggregate(),
-            **self.temporal_metrics["temporal_iou"].aggregate()
-        }
-        metrics["baseline"].update(temp)
-        
-        return metrics
+        self._reset_temporal_state()
+        return super()._test()
     
-

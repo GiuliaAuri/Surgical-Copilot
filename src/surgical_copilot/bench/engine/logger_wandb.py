@@ -22,6 +22,7 @@ class WandbLogger:
         if not self.is_active:
             return
 
+        baseline = metrics.get("baseline", {})
         log_dict = {
             "epoch": epoch,
             "Loss/Train": train_loss,
@@ -29,34 +30,19 @@ class WandbLogger:
             "Optimizer/Learning_Rate": lr,
             "System/Inference_FPS": metrics["inference_fps"],
             
-            "Metric_Dice/Baseline": metrics["baseline"]["dice"],
-            "Metric_HD95/Baseline": metrics["baseline"]["hd95"],
-            "Metric_IoU/Baseline": metrics["baseline"]["iou"],
+            "Metric_Dice/Baseline": baseline.get("dice", 0.0),
+            "Metric_HD95/Baseline": baseline.get("hd95", 0.0),
+            "Metric_IoU/Baseline": baseline.get("iou", 0.0),
+            "Metric_Temporal_IoU/Baseline": baseline.get("temporal_iou", 0.0),
+            "Metric_Temporal_Consistency/Baseline": baseline.get("temporal_consistency", 0.0),
         }
 
-        if "temporal_iou" in metrics.get("baseline", {}):
-            log_dict["Metric_Temporal_IoU/Baseline"] = metrics["baseline"]["temporal_iou"]
-
-        if "temporal_consistency" in metrics.get("baseline", {}):
-            log_dict["Metric_Temporal_Consistency/IoU"] = metrics["baseline"]["temporal_consistency"]
-
-        #if "interframe" in metrics.get("baseline", {}):
-        #    log_dict.update({
-        #        "Metric_Temporal_Interframe/IoU": metrics["baseline"]["interframe"].get("temporal_iou", 0.0),
-        #        "Metric_Temporal_Interframe/Dice": metrics["baseline"]["interframe"].get("temporal_dice", 0.0),
-        #    })
-
         for scenario, scores in metrics.get("stress", {}).items():
-            log_dict[f"Metric_Dice/Stress_{scenario}"] = scores["dice"]
-            log_dict[f"Metric_HD95/Stress_{scenario}"] = scores["hd95"]
-            log_dict[f"Metric_IoU/Stress_{scenario}"] = scores["iou"]
-
-            if "temporal_iou" in scores:
-                log_dict[f"Metric_Temporal_IoU/Stress_{scenario}"] = scores["temporal_iou"]
-                log_dict[f"Metric_Temporal_Var_IoU/Stress_{scenario}"] = scores["temporal_iou"]
-                
-            if "temporal_consistency" in scores:
-                log_dict[f"Metric_Temporal_Var/TC_IoU/Stress_{scenario}"] = scores["temporal_consistency"]
+            log_dict[f"Metric_Dice/Stress_{scenario}"] = scores.get("dice", 0.0)
+            log_dict[f"Metric_HD95/Stress_{scenario}"] = scores.get("hd95", 0.0)
+            log_dict[f"Metric_IoU/Stress_{scenario}"] = scores.get("iou", 0.0)
+            log_dict[f"Metric_Temporal_IoU/Stress_{scenario}"] = scores.get("temporal_iou", 0.0)
+            log_dict[f"Metric_Temporal_Consistency/Stress_{scenario}"] = scores.get("temporal_consistency", 0.0)
                 
         wandb.log(log_dict)
 
@@ -66,33 +52,19 @@ class WandbLogger:
 
         test_log_dict = {}
 
-        # 1. Definiamo le colonne dinamicamente
-        columns = ["Scenario", "Dice", "HD95", "IoU", "Inference_FPS", "Drop (%)"]
-        
-        # Controlliamo se ci sono metriche temporali in baseline
-        has_temporal = "temporal_iou" in metrics.get("baseline", {})
-        if has_temporal:
-            columns.insert(4, "Temporal_IoU")
-
-        has_consistency = "temporal_consistency" in metrics.get("baseline", {})
-        if has_consistency:
-            columns.insert(4 if not has_temporal else 5, "Temporal_Consistency")
+        columns = ["Scenario", "Dice", "HD95", "IoU", "Temporal_IoU", "Temporal_Consistency", "Inference_FPS", "Drop (%)"]
 
         table = wandb.Table(columns=columns)
 
-        # 2. Helper per creare le righe dinamicamente
         def get_row(scenario, scores):
             row = [
                 scenario,
                 round(scores.get("dice", 0.0), 4),
                 round(scores.get("hd95", 0.0), 2),
-                round(scores.get("iou", 0.0), 4)
+                round(scores.get("iou", 0.0), 4),
+                round(scores.get("temporal_iou", 0.0), 4),
+                round(scores.get("temporal_consistency", 0.0), 4),
             ]
-            if has_temporal:
-                row.append(round(scores.get("temporal_iou", 0.0), 4))
-
-            if has_consistency:
-                row.append(round(scores.get("temporal_consistency", 0.0), 4))
             
             row.extend([
                 round(scores.get("inference_fps", 0.0), 2),
@@ -103,17 +75,20 @@ class WandbLogger:
         # Baseline
         baseline = metrics.get("baseline", {})
         table.add_data(*get_row("baseline (clean)", baseline))
+        test_log_dict["Test/Baseline_Dice"] = baseline.get("dice", 0.0)
+        test_log_dict["Test/Baseline_HD95"] = baseline.get("hd95", 0.0)
+        test_log_dict["Test/Baseline_IoU"] = baseline.get("iou", 0.0)
+        test_log_dict["Test/Baseline_Temporal_IoU"] = baseline.get("temporal_iou", 0.0)
+        test_log_dict["Test/Baseline_Temporal_Consistency"] = baseline.get("temporal_consistency", 0.0)
+        test_log_dict["Test/Baseline_Inference_FPS"] = baseline.get("inference_fps", 0.0)
 
         # Stress Scenarios
         for scenario, scores in metrics.get("stress", {}).items():
-            # Log nel dizionario (già esistente)
             test_log_dict[f"Test_Stress_Dice/{scenario}"] = scores.get("dice", 0.0)
             test_log_dict[f"Test_Stress_HD95/{scenario}"] = scores.get("hd95", 0.0)
             test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores.get("iou", 0.0)
-            if has_temporal:
-                test_log_dict[f"Test_Stress_Temporal_IoU/{scenario}"] = scores.get("temporal_iou", 0.0)
-            if has_consistency:
-                test_log_dict[f"Test_Stress_Temporal_Consistency/{scenario}"] = scores.get("temporal_consistency", 0.0)
+            test_log_dict[f"Test_Stress_Temporal_IoU/{scenario}"] = scores.get("temporal_iou", 0.0)
+            test_log_dict[f"Test_Stress_Temporal_Consistency/{scenario}"] = scores.get("temporal_consistency", 0.0)
             
             table.add_data(*get_row(scenario, scores))
 

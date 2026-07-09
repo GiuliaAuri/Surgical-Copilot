@@ -1,21 +1,15 @@
 import torch
 import torch.nn.functional as F
-from monai.transforms import (
-    RandSpatialCropd,
-    RandCropByPosNegLabeld,
+from monai.transforms.compose import Compose
+from monai.transforms.croppad.dictionary import RandCropByPosNegLabeld
+from monai.transforms.intensity.dictionary import (
+    RandAdjustContrastd,
     RandGaussianNoised,
     RandGaussianSmoothd,
-    RandAdjustContrastd,
     RandShiftIntensityd,
-    Compose,
-    RandRotated,
-    RandAffined,
-    RandFlipd,
-    Rand2DElasticd,
-    Rand2DElasticd,
-    MapTransform, 
-    Lambdad,
 )
+from monai.transforms.spatial.dictionary import Rand2DElasticd, RandFlipd, RandRotated
+from monai.transforms.transform import MapTransform
 
 import random
 
@@ -250,7 +244,7 @@ class PerturbationFactory:
         return RandGaussianNoised(keys="current_image", prob=p, mean=0.0, std=std)
 
     @staticmethod
-    def gaussian_blur(p=0.3, sigma=(0.5, 1.5)):
+    def gaussian_blur(p=0.7, sigma=(0.5, 1.5)):
         """Simulate motion blur or defocus by applying a Gaussian blur with a randomly selected sigma value."""
         return RandGaussianSmoothd(keys="current_image", prob=p, sigma_x=sigma, sigma_y=sigma)
 
@@ -260,7 +254,7 @@ class PerturbationFactory:
         return RandAdjustContrastd(keys="current_image", prob=p, gamma=gamma)
 
     @staticmethod
-    def intensity_shift(p=0.2, offset=0.1):
+    def intensity_shift(p=0.4, offset=0.1):
         """Simulate changes in lighting conditions by randomly shifting the intensity of the image."""
         return RandShiftIntensityd(keys="current_image", prob=p, offsets=offset)
 
@@ -307,7 +301,7 @@ class PerturbationPipelines:
 
         spatial_list = [
             Force2DTransformd(keys=dynamic_keys),
-            RandSpatialCropd(keys=dynamic_keys, roi_size=(320, 320), random_size=False),
+            #RandSpatialCropd(keys=dynamic_keys, roi_size=(320, 320), random_size=False),
             RandCropByPosNegLabeld(
                 keys=dynamic_keys,
                 label_key="current_label",
@@ -333,11 +327,12 @@ class PerturbationPipelines:
 
         appearance_list = [
             RandAdjustContrastd(keys=["current_image"], prob=0.5, gamma=(0.5, 1.5)),
-            PerturbationFactory.gaussian_noise(),
-            PerturbationFactory.gaussian_blur(),
-            PerturbationFactory.specular(),
-            PerturbationFactory.surgical_smoke(),
-            PerturbationFactory.intensity_shift(),
+            RandShiftIntensityd(keys=["current_image"], prob=0.5, offsets=0.1),
+            #PerturbationFactory.gaussian_noise(),
+            #PerturbationFactory.gaussian_blur(),
+            #PerturbationFactory.specular(),
+            #PerturbationFactory.surgical_smoke(),
+            #PerturbationFactory.intensity_shift(),
         ]
 
     
@@ -358,7 +353,7 @@ class PerturbationPipelines:
             "clean": Compose([]),
 
             "noise_only": Compose([
-                PerturbationFactory.gaussian_noise(p=1.0, std=0.2)
+                PerturbationFactory.gaussian_noise(p=1.0, std=0.1)
             ]),
 
             "blur_only": Compose([
@@ -366,15 +361,19 @@ class PerturbationPipelines:
             ]),
 
             "intensity_shift_only": Compose([
-                PerturbationFactory.intensity_shift(p=1.0, offset=0.2)
+                PerturbationFactory.intensity_shift(p=1.0, offset=0.1)
             ]),
 
             "smoke_only": Compose([
                 PerturbationFactory.surgical_smoke(p=1.0, intensity=(0.2, 0.4))
             ]),
 
-            "contrast_only": Compose([
+            "high_contrast_only": Compose([
                 PerturbationFactory.contrast(p=1.0, gamma=(1.5, 2.0))
+            ]),
+
+            "low_contrast_only": Compose([ 
+                PerturbationFactory.contrast(p=1.0, gamma=(0.5, 1.8))
             ]),
 
             "specular_only": Compose([

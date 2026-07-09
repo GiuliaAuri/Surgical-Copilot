@@ -23,7 +23,7 @@ class KFoldRunner:
 
         # Determine the model key and check if it is temporal
         self.model_key = self.cfg.get("model_key", "unknown_model")
-        self.model_cfg = self.cfg.model.get(self.model_key, {})
+        self.model_cfg = self.cfg.model[self.model_key]
         raw = self.model_cfg.temporal_setting.get("temporal_mode", "none")
 
         self.temporal_mode = TemporalMode(raw)
@@ -99,23 +99,27 @@ class KFoldRunner:
             resolve=True
         )
 
-        if self.temporal_mode != TemporalMode.NONE:
-            target_layer = model_cfg.get("temporal_target_layer", None)
+        #if self.temporal_mode != TemporalMode.NONE:
+        #    target_layer = model_cfg.temporal_setting.get(
+        #        "temporal_target_layer",
+        #        None
+        #    )
 
         architecture_cfg = self.cfg.model[self.model_key].architecture
 
         model = instantiate(architecture_cfg).to(self.device)
 
-        if self.temporal_mode == TemporalMode.EARLY_FUSION:
+        if self.temporal_mode != TemporalMode.NONE:
             
             target_layer = self.cfg.model[self.model_key].temporal_setting.get("temporal_target_layer", None)
 
-            model = load_or_create_temporal_weights(
-                model=model,
-                fold_idx=fold,
-                device=self.device,
-                target_layer_name=target_layer
-            )
+            if target_layer is not None:
+                model = load_or_create_temporal_weights(
+                    model=model,
+                    fold_idx=fold,
+                    device=self.device,
+                    target_layer_name=target_layer
+                )
 
         batch_size = self.cfg.trainer.trainer.batch_size
 

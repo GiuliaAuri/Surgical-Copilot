@@ -1,27 +1,24 @@
 import random
 from pathlib import Path
-from PIL import Image
 from collections import defaultdict
 import torch
-import numpy as np
 from collections import defaultdict
 
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit
 
-from monai.data import CacheDataset, DataLoader, Dataset
-from monai.transforms import (
-    Compose,
-    LoadImaged,
-    LoadImage,
+from monai.data.dataloader import DataLoader
+from monai.data.dataset import  Dataset
+from monai.transforms.compose import Compose
+from monai.transforms.io.dictionary import LoadImaged
+from monai.transforms.intensity.dictionary import NormalizeIntensityd, ScaleIntensityRanged
+from monai.transforms.post.dictionary import AsDiscreted
+from monai.transforms.spatial.dictionary import Resized
+from monai.transforms.transform import MapTransform
+from monai.transforms.utility.dictionary import (
     EnsureChannelFirstd,
-    ScaleIntensityRanged,
-    Resized,
-    AsDiscreted,
+    EnsureTyped,
+    Lambdad,
     ToTensord,
-    NormalizeIntensityd,
-    EnsureTyped, 
-    MapTransform,
-    Lambdad
 )
 
 class HemosetDataSet:
@@ -57,8 +54,22 @@ class HemosetDataSet:
 
             self.patient_data[patient_id].append({
                 "current_image": str(img_path),
-                "current_label": str(final_mask_path)
+                "current_label": str(final_mask_path),
+                "patient_id": patient_id,
+                "frame_idx": int(frame_name)
             })
+#
+            for patient_id in self.patient_data:
+                self.patient_data[patient_id] = sorted(
+                    self.patient_data[patient_id],
+                    key=lambda x: x["frame_idx"]
+                )
+
+            for patient_id, frames in self.patient_data.items():
+
+                for idx, frame in enumerate(frames):
+
+                    frame["is_first_frame"] = (idx == 0)
 
         if not self.patient_data:
             raise RuntimeError("Nessun dato accoppiato (img/mask) trovato. Verifica la struttura delle cartelle.")
@@ -163,7 +174,7 @@ class HemosetDataSet:
         val_ds = Dataset(val_files, transform=self.base_transforms)
         test_ds = Dataset(test_files, transform=self.base_transforms)
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
         val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
 
@@ -524,7 +535,9 @@ class HemosetDataSequences(HemosetDataSet):
     
 # -----
 
-from monai.transforms import MapTransform, Compose
+from monai.transforms.transform import MapTransform
+from monai.transforms.compose import Compose
+
 
 class SequenceTransform(MapTransform):
     
@@ -553,54 +566,7 @@ class SequenceTransform(MapTransform):
         data["current_label"] = torch.stack(labels)   # (T,1,H,W)
 
         return data
-
-class UnflattenSequenced(MapTransform):
-    """
-    Reshape the tensors from (S*C, H, W) -> (S, C, H, W).
-    """
-    def __init__(self, keys, sequence_length, allow_missing_keys=False):
-        super().__init__(keys, allow_missing_keys)
-        self.seq_len = sequence_length
-
-    def __call__(self, data):
-        d = dict(data)
-        for key in self.keys:
-            if key in d:
-                SC, H, W = d[key].shape
-                
-                C = SC // self.seq_len
-                if d[key].ndim != 3:
-                    raise ValueError(f"Unexpected shape: {d[key].shape}")
-                d[key] = d[key].view(self.seq_len, C, H, W)
-                
-        return d
     
-from monai.transforms import LoadImaged
-
-#class CreatePreviousMaskd(MapTransform):
-#    def __init__(self, keys, allow_missing_keys=False):
-#        super().__init__(keys, allow_missing_keys)
-#        self.loader = LoadImage(reader="PILReader", image_only=False)
-#
-#    def __call__(self, data):
-#        d = dict(data)
-#        for key in self.keys:
-#            prev = d[key]
-#            if prev is None:
-#                d[key] = torch.zeros_like(d["current_label"])
-#            elif isinstance(prev, str):
-#                
-#                output = self.loader(prev)
-#                
-#                
-#                img = output[0] if isinstance(output, (tuple, list)) else output
-#                
-#                
-#                if not isinstance(img, np.ndarray):
-#                    img = np.array(img)
-#                
-#                d[key] = torch.as_tensor(img).detach().cpu()
-#        return d
 class CreatePreviousMaskd(MapTransform):
     def __init__(self, keys, allow_missing_keys=False):
         super().__init__(keys, allow_missing_keys)
