@@ -18,7 +18,7 @@
 ## 🤖 Can AI Become a Surgical Co-Pilot?
 Imagine a robotic assistant that doesn't just follow a surgeon’s lead but acts as a vigilant observer, identifying critical events before they escalate. In Minimally Invasive Surgery (MIS), uncontrolled bleeding is a high-stakes complication. Detecting it is one thing; localizing its exact source amidst smoke, reflections, and complex anatomy is the true frontier of computer vision.
 
-This project challenges the boundaries of simple classification. **Surgical-Copilot** is a dual-stage system capable of synergistic detection: segmenting blood pooling regions while simultaneously pinpointing the arterial point of origin in real-time[cite: 2]. Developed as part of the **TRAMIS** (Trustworthy Robotic Assistant for Improved Minimally Invasive Surgery) project, this work provides actionable, high-fidelity visual perception to surgical teams.
+This project challenges the boundaries of simple classification. **Surgical-Copilot** is a dual-stage system capable of synergistic detection: segmenting blood pooling regions while simultaneously pinpointing the arterial point of origin in real-time. Developed as part of the **TRAMIS** (Trustworthy Robotic Assistant for Improved Minimally Invasive Surgery) project, this work provides actionable, high-fidelity visual perception to surgical teams.
 
 ---
 
