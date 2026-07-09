@@ -37,10 +37,15 @@ class WandbLogger:
         if "temporal_iou" in metrics.get("baseline", {}):
             log_dict["Metric_Temporal_IoU/Baseline"] = metrics["baseline"]["temporal_iou"]
 
-        if "consistency" in metrics.get("baseline", {}):
+        baseline = metrics.get("baseline", {})
+
+        if "temporal_consistency" in baseline:
+            log_dict["Metric_Temporal_Consistency/IoU"] = baseline.get("temporal_consistency", 0.0)
+
+        if "consistency" in baseline:
             log_dict.update({
-                "Metric_Temporal_Consistancy/IoU": metrics["baseline"]["consistency"].get("temporal_iou", 0.0),
-                "Metric_Temporal_Consistancy/Dice": metrics["baseline"]["consistency"].get("temporal_dice", 0.0),
+                "Metric_Temporal_Consistency/IoU": baseline["consistency"].get("temporal_iou", 0.0),
+                "Metric_Temporal_Consistency/Dice": baseline["consistency"].get("temporal_dice", 0.0),
             })
 
         #if "interframe" in metrics.get("baseline", {}):
@@ -77,6 +82,10 @@ class WandbLogger:
         if has_temporal:
             columns.insert(4, "Temporal_IoU")
 
+        has_consistency = "temporal_consistency" in metrics.get("baseline", {})
+        if has_consistency:
+            columns.insert(4 if not has_temporal else 5, "Temporal_Consistency")
+
         table = wandb.Table(columns=columns)
 
         # 2. Helper per creare le righe dinamicamente
@@ -89,6 +98,9 @@ class WandbLogger:
             ]
             if has_temporal:
                 row.append(round(scores.get("temporal_iou", 0.0), 4))
+
+            if has_consistency:
+                row.append(round(scores.get("temporal_consistency", 0.0), 4))
             
             row.extend([
                 round(scores.get("inference_fps", 0.0), 2),
@@ -108,6 +120,8 @@ class WandbLogger:
             test_log_dict[f"Test_Stress_IoU/{scenario}"] = scores.get("iou", 0.0)
             if has_temporal:
                 test_log_dict[f"Test_Stress_Temporal_IoU/{scenario}"] = scores.get("temporal_iou", 0.0)
+            if has_consistency:
+                test_log_dict[f"Test_Stress_Temporal_Consistency/{scenario}"] = scores.get("temporal_consistency", 0.0)
             
             table.add_data(*get_row(scenario, scores))
 
