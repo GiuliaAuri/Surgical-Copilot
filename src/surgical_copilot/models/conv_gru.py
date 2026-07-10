@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from typing import List, Tuple, Optional
 
-import logging
+#import logging
 
-logger = logging.getLogger("ConvGRU")
+#logger = logging.getLogger("ConvGRU")
 
 class ConvGRUCell(nn.Module):
     """
@@ -71,11 +71,11 @@ class ConvGRU(nn.Module):
         initial_states: Optional[List[torch.Tensor]] = None,
     ):
         B, T, C, H, W = X.shape
-        logger.debug(f"[ConvGRU] Input shape: {X.shape}")
+        #logger.debug(f"[ConvGRU] Input shape: {X.shape}")
 
         if initial_states is None:
             states = [None] * self.num_layers
-            logger.debug("[ConvGRU] No initial states provided, initializing with zeros.")
+            #logger.debug("[ConvGRU] No initial states provided, initializing with zeros.")
         else:
             states = list(initial_states)
 
@@ -91,7 +91,7 @@ class ConvGRU(nn.Module):
                     dtype=X.dtype
                 )
             
-            logger.debug(f"[ConvGRU] Layer {l} processing. Input: {current_input.shape}, Hidden: {h.shape}")
+            #logger.debug(f"[ConvGRU] Layer {l} processing. Input: {current_input.shape}, Hidden: {h.shape}")
 
             h_list = []
             for t in range(T):
@@ -102,15 +102,15 @@ class ConvGRU(nn.Module):
             
             if not self.return_sequence:
                 seq = seq[:, -1]
-                logger.debug(f"[ConvGRU] Layer {l} returned last frame: {seq.shape}")
-            else:
-                logger.debug(f"[ConvGRU] Layer {l} returned sequence: {seq.shape}")
-
+                #logger.debug(f"[ConvGRU] Layer {l} returned last frame: {seq.shape}")
+            #else:
+                #logger.debug(f"[ConvGRU] Layer {l} returned sequence: {seq.shape}")
+            
             layer_outputs.append(seq)
             current_input = seq
             states[l] = h
 
         last_layer_output = layer_outputs[-1]
-        logger.debug(f"[ConvGRU] Final output shape: {last_layer_output.shape}")
+        #logger.debug(f"[ConvGRU] Final output shape: {last_layer_output.shape}")
         
         return last_layer_output, states

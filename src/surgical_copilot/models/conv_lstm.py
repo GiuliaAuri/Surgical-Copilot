@@ -175,14 +175,14 @@ class ConvLSTM(nn.Module):
         """
 
         B, T, C, H, W = X.shape
-        print(f"[ConvLSTM] Input shape: {X.shape}")
+        #print(f"[ConvLSTM] Input shape: {X.shape}")
 
         if initial_states is None:
             states = [None] * self.num_layers
-            print("[ConvLSTM] No initial states, using None (lazy initialization in cell).")
+            #print("[ConvLSTM] No initial states, using None (lazy initialization in cell).")
         else:
             states = list(initial_states)
-            print(f"[ConvLSTM] Initial states provided for {len(states)} layers.")
+            #print(f"[ConvLSTM] Initial states provided for {len(states)} layers.")
 
         layer_outputs: List[torch.Tensor] = []
         current_input = X
@@ -191,17 +191,17 @@ class ConvLSTM(nn.Module):
             h_list: List[torch.Tensor] = []
             state = states[l]
 
-            print(f"[ConvLSTM] Layer {l} processing. Input: {current_input.shape}")
-            print(f"[ConvLSTM] state type: {type(state)}")
-            print(f"[ConvLSTM] is tensor: {isinstance(state, torch.Tensor)}")
+            #print(f"[ConvLSTM] Layer {l} processing. Input: {current_input.shape}")
+            #print(f"[ConvLSTM] state type: {type(state)}")
+            #print(f"[ConvLSTM] is tensor: {isinstance(state, torch.Tensor)}")
 
-            if isinstance(state, torch.Tensor):
-                print(f"[ConvLSTM] state.shape: {state.shape}")
-            elif isinstance(state, tuple):
-                print(f"[ConvLSTM] tuple shapes: {[x.shape for x in state]}")
+            #if isinstance(state, torch.Tensor):
+            #    print(f"[ConvLSTM] state.shape: {state.shape}")
+            #elif isinstance(state, tuple):
+            #    print(f"[ConvLSTM] tuple shapes: {[x.shape for x in state]}")
 
-            for i, s in enumerate(states):
-                print(f"Layer index: {i}, State type: {type(s)}")
+            #for i, s in enumerate(states):
+            #    print(f"Layer index: {i}, State type: {type(s)}")
 
             for t in range(T):
                 x_t = current_input[:, t]
@@ -209,13 +209,13 @@ class ConvLSTM(nn.Module):
                 state = (h_t, c_t)
                 h_list.append(h_t)
 
-            print("DEBUG STATE AFTER LAYER")
-            print(type(states[l]))
+            #print("DEBUG STATE AFTER LAYER")
+            #print(type(states[l]))
 
-            if isinstance(states[l], tuple):
-                print("tuple length:", len(states[l]))
-                print(states[l][0].shape)
-                print(states[l][1].shape)
+            #if isinstance(states[l], tuple):
+            #    print("tuple length:", len(states[l]))
+            #    print(states[l][0].shape)
+            #    print(states[l][1].shape)
 
             states[l] = state
             
@@ -224,9 +224,10 @@ class ConvLSTM(nn.Module):
             
             if not self.return_sequence:
                 seq = seq[:, -1]
-                print(f"[ConvLSTM] Layer {l} returned last frame: {seq.shape}")
-            else:
-                print(f"[ConvLSTM] Layer {l} returned sequence: {seq.shape}")
+                #print(f"[ConvLSTM] Layer {l} returned last frame: {seq.shape}")
+            #else:
+            #    print(f"[ConvLSTM] Layer {l} returned sequence: {seq.shape}")
+            #    pass
 
             layer_outputs.append(seq)
             current_input = seq
@@ -234,7 +235,7 @@ class ConvLSTM(nn.Module):
         last_layer_output = layer_outputs[-1]
         #last_states = states[-1]
 
-        print(f"[ConvLSTM] Final output: {last_layer_output.shape}")
+        #print(f"[ConvLSTM] Final output: {last_layer_output.shape}")
         #print(f"[ConvLSTM] Final states: {[s[0].shape for s in last_states]}")
         
         return last_layer_output, states

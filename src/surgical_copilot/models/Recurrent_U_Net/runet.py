@@ -7,7 +7,6 @@ from monai.networks.nets.unet import UNet
 from src.surgical_copilot.models.conv_gru import ConvGRU
 from src.surgical_copilot.models.conv_lstm import ConvLSTM
 
-# Configurazione del logger
 logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: [%(name)s] %(message)s')
 logger = logging.getLogger("RecurrentUNet")
 
