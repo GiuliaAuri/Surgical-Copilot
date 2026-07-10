@@ -5,11 +5,6 @@ import wandb
 from tqdm import tqdm
 from pathlib import Path
 
-#from monai.metrics.meandice import DiceMetric
-#from monai.metrics.hausdorff_distance import HausdorffDistanceMetric
-#from monai.metrics.meaniou import MeanIoU
-#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
-#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_iou import TemporalIoU
 from src.surgical_copilot.bench.metrics.metrics_manager import MetricManager
 
 from monai.transforms.post.array import Activations, AsDiscrete
@@ -49,6 +44,9 @@ class BenchmarkEngine:
         self.loss_fn = loss_fn
         self.scaler = scaler
 
+        if isinstance(temporal_mode, str):
+            temporal_mode = TemporalMode(temporal_mode)
+
         self.temporal_mode = temporal_mode
         self.is_temporal = is_temporal
 
@@ -57,15 +55,6 @@ class BenchmarkEngine:
         self.fold_idx = fold_idx
 
         self.accumulation_steps = self.cfg.trainer.trainer.get("accumulation_steps", 4)
-
-        #self.dice_metric = DiceMetric(reduction="mean")
-        #self.hd95_metric = HausdorffDistanceMetric(percentile=95)
-        #self.iou = MeanIoU(reduction="mean")
-#
-        #self.previous_sequence = None
-#
-        #self.temporal_consistency = TemporalConsistencyMetric(device=self.device)
-        #self.temporal_iou = TemporalIoU(threshold=0.5, from_logits=False, eps=1e-6)
 
         self.metrics = MetricManager(device=self.device)
 
@@ -80,6 +69,7 @@ class BenchmarkEngine:
 
         self.history = {
             "train_loss": [],
+            "val_loss": [],
             "clean_dice": [],
             "fps": []
         }
@@ -87,23 +77,6 @@ class BenchmarkEngine:
         self.logger = WandbLogger()
         
         self.logger._print_model_info(model, device)
-
-    #def _reset_metrics_state(self):
-    #    self.dice_metric.reset()
-    #    self.hd95_metric.reset()
-    #    self.iou.reset()
-    #    self.temporal_consistency.reset()
-    #    self.temporal_iou.reset()
-    #    self.temporal_iou.reset_sequence()
-
-    #def _get_current_metrics_dict(self):
-    #    return {
-    #        "dice": self.dice_metric.aggregate().item(),
-    #        "hd95": self.hd95_metric.aggregate().item(),
-    #        "iou": self.iou.aggregate().item(),
-    #        "temporal_consistency": self.temporal_consistency.aggregate().get("temporal_consistency", 0.0),
-    #        "temporal_iou": self.temporal_iou.aggregate().get("temporal_iou", 0.0)
-    #    }
 
     def _prepare_inputs(self, batch):
             
@@ -114,11 +87,30 @@ class BenchmarkEngine:
     
     def _get_sequence_info(self, batch):
 
-        is_first_frame = batch["is_first_frame"][0]
-        sequence_id = batch["patient_id"][0]
+        is_first_frame = batch["is_first_frame"]
+        sequence_id = batch["patient_id"]
 
         return is_first_frame, sequence_id
-        
+    
+    def _gpu_warmup(self):
+
+        # Warmup GPU
+        if self.device.type == "cuda":
+
+            H, W = self.cfg.data.img_size
+
+            if getattr(self, "temporal_mode", None) == TemporalMode.LATE_FUSION:
+                T = self.cfg.data.sequence_length
+                dummy_input = torch.randn(1, T, 3, H, W, device=self.device)
+            elif getattr(self, "temporal_mode", None) == TemporalMode.EARLY_FUSION:
+                dummy_input = torch.randn(1, 4, H, W, device=self.device)
+            else:
+                dummy_input = torch.randn(1, 3, H, W, device=self.device)
+            
+            # Scalda solo il modello, non il metodo _prepare_inputs
+            with torch.cuda.amp.autocast(enabled=self.scaler is not None):
+                for _ in range(5):
+                    self.model(dummy_input)
 
     def _forward_step(self, x, y):
         logits = self.model(x)
@@ -229,23 +221,7 @@ class BenchmarkEngine:
             "stress": {}
         }
 
-        # Warmup GPU
-        if self.device.type == "cuda":
-
-            H, W = self.cfg.data.img_size
-
-            if getattr(self, "temporal_mode", None) == TemporalMode.LATE_FUSION:
-                T = self.cfg.data.sequence_length
-                dummy_input = torch.randn(1, T, 3, H, W, device=self.device)
-            elif getattr(self, "temporal_mode", None) == TemporalMode.EARLY_FUSION:
-                dummy_input = torch.randn(1, 4, H, W, device=self.device)
-            else:
-                dummy_input = torch.randn(1, 3, H, W, device=self.device)
-            
-            # Scalda solo il modello, non il metodo _prepare_inputs
-            with torch.cuda.amp.autocast(enabled=self.scaler is not None):
-                for _ in range(5):
-                    _ = self.model(dummy_input)
+        self._gpu_warmup()
 
         with torch.inference_mode():
 
@@ -322,6 +298,8 @@ class BenchmarkEngine:
         # define a fictitious epoch for logging purposes, since we are in the test phase
         test_epoch = self.cfg.trainer.trainer.max_epochs
 
+        self._gpu_warmup()
+
         with torch.inference_mode():
 
             for scenario_name, pipeline in eval_scenarios.items():
@@ -376,27 +354,27 @@ class BenchmarkEngine:
 
                         logged_visuals = True
 
-                    scores = self.metrics.compute()
+                scores = self.metrics.compute()
 
-                    scores["inference_fps"] = (
-                        total_images /
-                        max(total_model_time, 1e-8)
-                    )
+                scores["inference_fps"] = (
+                    total_images /
+                    max(total_model_time, 1e-8)
+                )
 
-                    
-                    if scenario_name == "clean":
-                        metrics["baseline"] = scores
-                        drop_info = "" 
-                    else:
-                        clean_dice = metrics["baseline"].get("dice", 1e-8)
-                        robustness_drop = (clean_dice - scores["dice"]) / (clean_dice + 1e-8)
+                
+                if scenario_name == "clean":
+                    metrics["baseline"] = scores
+                    drop_info = "" 
+                else:
+                    clean_dice = metrics["baseline"].get("dice", 1e-8)
+                    robustness_drop = (clean_dice - scores["dice"]) / (clean_dice + 1e-8)
 
-                        scores["drop"] = robustness_drop
-                        metrics["stress"][scenario_name] = scores
-                        scores["drop_percent"] = robustness_drop * 100
-                        drop_info = f" | Drop: {robustness_drop * 100:>5.1f}%"
+                    scores["drop"] = robustness_drop
+                    metrics["stress"][scenario_name] = scores
+                    scores["drop_percent"] = robustness_drop * 100
+                    drop_info = f" | Drop: {robustness_drop * 100:>5.1f}%"
 
-                    print(f"[{scenario_name:<20}] Dice: {scores['dice']:.4f} | HD95: {scores['hd95']:>7.2f}{drop_info}")
+                print(f"[{scenario_name:<20}] Dice: {scores['dice']:.4f} | HD95: {scores['hd95']:>7.2f}{drop_info}")
 
         self.logger.log_test_metrics(metrics)
 
@@ -423,9 +401,9 @@ class BenchmarkEngine:
             fps = metrics["inference_fps"]
 
             self.history["train_loss"].append(train_loss)
-            self.history.setdefault("val_loss", []).append(val_loss)
-            self.history.setdefault("clean_dice", []).append(clean_dice)
-            self.history.setdefault("fps", []).append(fps)
+            self.history["val_loss"].append(val_loss)
+            self.history["clean_dice"].append(clean_dice)
+            self.history["fps"].append(fps)
 
             print(f"Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
             print(f"Clean Dice: {clean_dice:.4f} | FPS: {fps:.2f}")
@@ -452,18 +430,18 @@ class BenchmarkEngine:
 
     def _save_checkpoint(self, fold_idx: int) -> str:
 
-        model_name = self.cfg.model_key 
-        
+        model_class_name = self.model.__class__.__name__
+
         base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
-        #base_dir = Path("/homes/gauri/lab/results")
-        weights_dir = base_dir / model_name
+        weights_dir = base_dir / model_class_name
         weights_dir.mkdir(parents=True, exist_ok=True)
-        
+
         save_path = weights_dir / f"best_fold{fold_idx}.pth"
-        
+
         temp_path = save_path.with_suffix('.tmp')
         torch.save(self.model.state_dict(), temp_path)
         temp_path.replace(save_path)
-        
+
         return str(save_path)
+   
    

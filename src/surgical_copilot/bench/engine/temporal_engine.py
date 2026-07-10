@@ -3,8 +3,6 @@ import numpy as np
 
 from src.surgical_copilot.bench.engine.benchmark_engine import BenchmarkEngine
 from src.surgical_copilot.bench.engine.temporal_mode import TemporalMode
-#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_consistency import TemporalConsistencyMetric
-#from src.surgical_copilot.bench.metrics.temporal_metrics.temporal_iou import TemporalIoU
 
 class TemporalBenchmarkEngine(BenchmarkEngine):
 
@@ -23,6 +21,11 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         fold_idx=0,
         temporal_mode=TemporalMode.EARLY_FUSION
     ):
+        
+        if isinstance(temporal_mode, str):
+            temporal_mode = TemporalMode(temporal_mode)
+
+        self.temporal_mode = temporal_mode
 
         super().__init__(
             model=model,
@@ -36,14 +39,8 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             cfg=cfg,
             device=device,
             fold_idx=fold_idx,
-            temporal_mode=temporal_mode
+            temporal_mode=self.temporal_mode
         )
-
-
-        if isinstance(temporal_mode, str):
-            temporal_mode = TemporalMode(temporal_mode)
-
-        self.temporal_mode = temporal_mode
 
         # memory states
         self.recurrent_state = None
@@ -51,14 +48,6 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         self._current_patient = None
         self.last_x = None  # Store the last input for temporal metrics
 
-        #self.temporal_metrics = {
-        #    "consistency": None,
-        #    "temporal_iou": TemporalIoU(
-        #            threshold=0.5,
-        #            from_logits=False,   
-        #            eps=1e-6
-        #        )
-        #}
 
     def _check_patient(self, batch):
 
@@ -67,35 +56,13 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         if patient != self._current_patient:
             self.recurrent_state = None
             self._current_patient = patient
-    
-    #def _reset_temporal_state(self):
-    #    self.recurrent_state = None
-    #    self.mask_prev = None
-    #
-    #    for key, metric in self.temporal_metrics.items():
-    #        if metric is not None: 
-    #            metric.reset()
-    #        if key == "temporal_iou":
-    #            metric.reset_sequence()
 
     def _reset_temporal_state(self):
         self.recurrent_state = None
         self.mask_prev = None
         self._current_patient = None
 
-
-    #def _reset_temporal_metrics(self):
-    #    for metric in self.temporal_metrics.values():
-    #        if metric is not None:
-    #            metric.reset()
-    
-    #def _reset_all(self):
-    #    self._reset_temporal_state()
-    #    self._reset_temporal_metrics()
-
     def _prepare_inputs(self, batch):
-
-        #self._check_new_video(batch)
 
         # EARLY_FUSION mode: we expect the input to be a single frame,
         # and we concatenate the previous mask (or a zero mask if it's the first frame) 
@@ -143,11 +110,9 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
         images = batch["current_image"].to(self.device)  # shape: (B, T, C, H, W)
         labels = batch["current_label"].to(self.device)  # shape: (B, T, 1, H, W)
 
-        print("[TemporalBenchmarkEngine] Preparing inputs for LATE_FUSION mode:")
-        print("  Images shape:", images.shape)
-        print("  Labels shape:", labels.shape)
-
-        #self._reset_temporal_state()
+        #print("[TemporalBenchmarkEngine] Preparing inputs for LATE_FUSION mode:")
+        #print("  Images shape:", images.shape)
+        #print("  Labels shape:", labels.shape)
 
         self.last_x = images.clone().detach()  # Store the last input for temporal metrics
 
@@ -259,20 +224,14 @@ class TemporalBenchmarkEngine(BenchmarkEngine):
             )
             return
         
-        B, T = preds.shape[:2]
-        preds_flat = preds.reshape(B * T, *preds.shape[2:])
-        labels_flat = labels.reshape(B * T, *labels.shape[2:])
-        self.metrics.update_spatial(
-            preds_flat,
-            labels_flat
-        )
-        
+        _ , T = preds.shape[:2]
+
         for t in range(T):
             super()._update_metrics(
                 preds[:,t],
                 labels[:,t],
                 self.last_x[:,t],
-                is_first_frame=(t==0),
+                is_first_frame=(t == 0 and bool(is_first_frame)),  # reset only at the start of the patient's first window
                 sequence_id=sequence_id
             )
 

@@ -64,12 +64,10 @@ class WandbLogger:
                 round(scores.get("iou", 0.0), 4),
                 round(scores.get("temporal_iou", 0.0), 4),
                 round(scores.get("temporal_consistency", 0.0), 4),
-            ]
-            
-            row.extend([
                 round(scores.get("inference_fps", 0.0), 2),
                 round(scores.get("drop_percent", scores.get("drop", 0.0) * 100), 2)
-            ])
+            ]
+            
             return row
 
         # Baseline

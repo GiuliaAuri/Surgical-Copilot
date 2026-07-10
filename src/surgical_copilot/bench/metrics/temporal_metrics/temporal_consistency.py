@@ -18,6 +18,10 @@ class TemporalConsistencyMetric:
 
         self.reset()
 
+    def reset_sequence(self):
+        self.prev_pred = None
+        self.prev_image = None
+        
     def reset(self):
         self.prev_pred = None
         self.prev_image = None

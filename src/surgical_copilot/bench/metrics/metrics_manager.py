@@ -43,6 +43,7 @@ class MetricManager:
         if sequence_id != self.current_sequence:
 
             self.temporal_iou.reset_sequence()
+            self.temporal_consistency.reset_sequence() 
             self.current_sequence = sequence_id
 
     def reset_sequence(self):
@@ -68,11 +69,19 @@ class MetricManager:
         self.temporal_consistency(preds=preds, labels=labels, images=images)
 
     def compute(self):
+        t_iou_res = self.temporal_iou.aggregate()
+        t_const_res = self.temporal_consistency.aggregate()
+
+        temporal_iou_val = t_iou_res.get("temporal_iou", t_iou_res.get("Temporal_IoU", 0.0))
+        temporal_consistency_val = t_const_res.get("temporal_consistency", t_const_res.get("Temporal_Consistency", 0.0))
+
+        if isinstance(temporal_iou_val, dict):
+            temporal_iou_val = temporal_iou_val.get("mean", 0.0)
 
         return {
             "dice": self.dice.aggregate().item(),
             "iou": self.iou.aggregate().item(),
             "hd95": self.hd95.aggregate().item(),
-            **self.temporal_iou.aggregate(),
-            **self.temporal_consistency.aggregate()
+            "temporal_iou": temporal_iou_val,
+            "temporal_consistency": temporal_consistency_val
         }
