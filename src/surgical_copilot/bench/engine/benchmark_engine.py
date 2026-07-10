@@ -458,7 +458,8 @@ class BenchmarkEngine:
 
     def _save_checkpoint(self, fold_idx: int) -> str:
 
-        model_class_name = self.model.__class__.__name__
+        #model_class_name = self.model.__class__.__name__
+        model_class_name = self.cfg.get("model_key", "unknown_model")
 
         base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
         weights_dir = base_dir / model_class_name
