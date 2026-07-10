@@ -12,17 +12,30 @@ unet:
     strides: [2, 2, 2, 2]
     num_res_units: 2
 
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
+    warmup_epochs: 0
+
   temporal_setting:
     temporal_mode: none
 
 unet_resnet18:
+
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.SMPUNet
+    _target_: src.surgical_copilot.models.segmentation_smp.SMPUNet
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     use_imagenet_norm: True
     in_channels: 3
     classes: 1
+
+  initialization:
+    mode: imagenet
+    checkpoint_path: null
+    freeze_backbone: false
+    warmup_epochs: 0
 
   temporal_setting:
     temporal_mode: none
@@ -32,6 +45,7 @@ unet_resnet18:
 ### WARM-UP ON
 
 unet_early_fusion_warmup_on:
+  
   architecture:
     _target_: monai.networks.nets.UNet
     spatial_dims: 2
@@ -40,30 +54,35 @@ unet_early_fusion_warmup_on:
     channels: [32, 64, 128, 256, 512]
     strides: [2, 2, 2, 2]
     num_res_units: 2
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
+
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
+    freeze_backbone: false
+    warmup_epochs: 5
 
   temporal_setting:
     temporal_mode: "early_fusion"
     temporal_target_layer: "model.0.conv.unit0.conv.weight"
-    warmup_epochs: 5
 
 unet_resnet18_early_fusion_warmup_on:
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.SMPUNet
+    _target_: src.surgical_copilot.models.segmentation_smp.SMPUNet
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     use_imagenet_norm: True
     in_channels: 4 # 3 RGB + 1 Maschera
     classes: 1
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+    freeze_backbone: true
+    warmup_epochs: 5
 
   temporal_setting:
     temporal_mode: "early_fusion"
     temporal_target_layer: "model.0.conv.unit0.conv.weight" # Copia i pesi da 3 a 4 canali
-
-  initialization:
-    warmup_epochs: 5
-    freeze_backbone: True
 
 ### WARM-UP OFF
 
@@ -80,12 +99,17 @@ unet_early_fusion_warmup_off:
 
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
+  
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
     warmup_epochs: 0
 
 unet_resnet18_early_fusion_warmup_off:
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.SMPUNet
+    _target_: src.surgical_copilot.models.segmentation_smp.SMPUNet
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     use_imagenet_norm: True
@@ -94,11 +118,13 @@ unet_resnet18_early_fusion_warmup_off:
 
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: None # Copia i pesi da 3 a 4 canali
+    temporal_target_layer: null # Copia i pesi da 3 a 4 canali
 
   initialization:
+    mode: scratch
     warmup_epochs: 0
-    freeze_backbone: True
+    checkpoint_path: null
+    freeze_backbone: false
 
 ## LATE FUSION
 
@@ -114,16 +140,19 @@ r_unet_late_fusion_lstm_warmup_on:
     strides: [2, 2, 2, 2]
     recurrent_type: "lstm"
     num_res_units: 2
-    recurrent_layers: 1  
-    freeze_backbone: True
+    recurrent_layers: 1 
+
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
+    freeze_backbone: true
     warmup_epochs: 5
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
-r_unet_late_fusion_gru_lstm_warmup_on:
+r_unet_late_fusion_gru_warmup_on:
   architecture:
     _target_: src.surgical_copilot.models.Recurrent_U_Net.runet.RecurrentUNet
     spatial_dims: 2
@@ -134,47 +163,59 @@ r_unet_late_fusion_gru_lstm_warmup_on:
     recurrent_type: "gru"
     num_res_units: 2
     recurrent_layers: 1  
-    freeze_backbone: True
+
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
+    freeze_backbone: true
     warmup_epochs: 5
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 r_unet_resnet18_late_fusion_lstm_warmup_on:
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+    _target_: src.surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     in_channels: 3
     classes: 1
     recurrent_type: "lstm"
     bottleneck_dim: 512
-    freeze_backbone: True
-    warmup_epochs: 5
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+    recurrent_layers: 1
 
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+    freeze_backbone: true
+    warmup_epochs: 5
+    
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 r_unet_resnet18_late_fusion_gru_warmup_on:
+
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+    _target_: src.surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     in_channels: 3
     classes: 1
     recurrent_type: "gru"
     bottleneck_dim: 512
-    freeze_backbone: True
+    recurrent_layers: 1
+
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+    freeze_backbone: true
     warmup_epochs: 5
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 ### WARMUP OFF
 
@@ -189,13 +230,16 @@ r_unet_late_fusion_lstm_warmup_off:
     recurrent_type: "lstm"
     num_res_units: 2
     recurrent_layers: 1  
-    freeze_backbone: True
+    
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
     warmup_epochs: 0
-    pretrained_weights_path: None
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 r_unet_late_fusion_gru_warmup_off:
   architecture:
@@ -208,47 +252,58 @@ r_unet_late_fusion_gru_warmup_off:
     recurrent_type: "gru"
     num_res_units: 2
     recurrent_layers: 1  
-    freeze_backbone: True
+  
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
     warmup_epochs: 0
-    pretrained_weights_path: None
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 r_unet_resnet18_late_fusion_lstm_warmup_off:
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+    _target_: src.surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     in_channels: 3
     classes: 1
+    recurrent_layers: 1
     recurrent_type: "lstm"
     bottleneck_dim: 512
-    freeze_backbone: True
+  
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
     warmup_epochs: 0
-    pretrained_weights_path: None
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 r_unet_resnet18_late_fusion_gru_warmup_off:
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+    _target_: src.surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     in_channels: 3
     classes: 1
+    recurrent_layers: 1
     recurrent_type: "gru"
     bottleneck_dim: 512
-    freeze_backbone: True
+  
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
     warmup_epochs: 0
-    pretrained_weights_path: None
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 # Unet++
 
@@ -262,17 +317,29 @@ unet_plus_plus:
     in_channels: 3
     features: [32, 64, 128, 256, 512, 32]
     deep_supervision: False
+  
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
+    warmup_epochs: 0
 
   temporal_setting:
     temporal_mode: none
 
 unet_plus_plus_resnet18:
   architecture:
-    _target_: surgical_copilot.models.segmentation_smp.SMPUNetPlusPlus
+    _target_: src.surgical_copilot.models.segmentation_smp.SMPUNetPlusPlus
     encoder_name: "resnet18"
     encoder_weights: "imagenet"
     in_channels: 3
     classes: 1
+
+  initialization:
+    mode: imagenet
+    checkpoint_path: null
+    freeze_backbone: false
+    warmup_epochs: 0
 
   temporal_setting:
     temporal_mode: none
@@ -291,6 +358,12 @@ swin_unetr:
     spatial_dims: 2 # generally SwinUNETR is used with 3D image. In this way we can manage 2D frame
     use_checkpoint: True
 
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
+    warmup_epochs: 0
+
   temporal_setting:
     temporal_mode: none
 
@@ -300,9 +373,15 @@ swin_unetr:
 
 yolo_v8_seg:
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
+    _target_: src.surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
     num_classes: 1
     num_masks: 32
+
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
+    warmup_epochs: 0
 
   temporal_setting:
     temporal_mode: none
@@ -311,28 +390,38 @@ yolo_v8_seg:
 
 yolo_early_fusion_warmup_on:
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
+    _target_: src.surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
     in_channels: 4 # 3 channels RGB + 1 mask t-1 channel
     num_classes: 1
     num_masks: 32
     pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
 
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
+    freeze_backbone: true
+    warmup_epochs: 5
+
   temporal_setting:
     temporal_mode: "early_fusion"
     temporal_target_layer: "yolo.backbone.stem.0.conv.weight"
-    warmup_epochs: 5
 
 yolo_early_fusion_warmup_off:
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
+    _target_: src.surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.CustomYOLOSemantic
     in_channels: 4 # 3 channels RGB + 1 mask t-1 channel
     num_classes: 1
     num_masks: 32
 
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
+    warmup_epochs: 0
+
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: None
-    warmup_epochs: 0
+    temporal_target_layer: null
 
 ## LATE FUSION
 
@@ -341,15 +430,18 @@ yolo_early_fusion_warmup_off:
 yolo_late_fusion_gru_warmup_on:
 
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
+    _target_: src.surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
     in_channels: 3
     num_classes: 1
     num_masks: 32
     recurrent_type: "gru"
     recurrent_layers: 1
-    freeze_backbone: True
+
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
+    freeze_backbone: true
     warmup_epochs: 5
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
@@ -357,14 +449,18 @@ yolo_late_fusion_gru_warmup_on:
 
 yolo_late_fusion_lstm_warmup_on:
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
+    _target_: src.surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
     in_channels: 3
     num_classes: 1
     num_masks: 32
     recurrent_type: "lstm"
-    freeze_backbone: True
+    recurrent_layers: 1
+
+  initialization:
+    mode: checkpoint
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
+    freeze_backbone: true
     warmup_epochs: 5
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
@@ -375,31 +471,38 @@ yolo_late_fusion_lstm_warmup_on:
 yolo_late_fusion_gru_warmup_off:
 
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
+    _target_: src.surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
     in_channels: 3
     num_classes: 1
     num_masks: 32
     recurrent_type: "gru"
     recurrent_layers: 1
-    freeze_backbone: True
+
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
     warmup_epochs: 0
-    pretrained_weights_path: None
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null
 
 yolo_late_fusion_lstm_warmup_off:
   architecture:
-    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
+    _target_: src.surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
     in_channels: 3
     num_classes: 1
     num_masks: 32
     recurrent_type: "lstm"
-    freeze_backbone: True
+    recurrent_layers: 1
+
+  initialization:
+    mode: scratch
+    checkpoint_path: null
+    freeze_backbone: false
     warmup_epochs: 0
-    pretrained_weights_path: None
 
   temporal_setting:
     temporal_mode: "late_fusion"
-    temporal_target_layer: None
+    temporal_target_layer: null

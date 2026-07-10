@@ -91,18 +91,8 @@ class KFoldRunner:
 
     def _build_fold(self, dataset, fold):
 
-        #model_cfg = OmegaConf.to_container(
-        #    self.cfg.model[self.cfg.model_key],
-        #    resolve=True
-        #)
-
-        #if self.temporal_mode != TemporalMode.NONE:
-        #    target_layer = model_cfg.temporal_setting.get(
-        #        "temporal_target_layer",
-        #        None
-        #    )
-
         architecture_cfg = self.cfg.model[self.model_key].architecture
+        init_cfg = self.cfg.model[self.model_key].initialization
 
         model = instantiate(architecture_cfg).to(self.device)
 
@@ -113,12 +103,19 @@ class KFoldRunner:
             if target_layer is None or str(target_layer).lower() == "none":
                 target_layer = None
 
+            raw_checkpoint = init_cfg.get("checkpoint_path", None)
+            if raw_checkpoint and str(raw_checkpoint).lower() not in ("none", "null"):
+                pretrained_path = raw_checkpoint.replace("{fold_idx}", str(fold))
+            else:
+                pretrained_path = None
+
             if target_layer is not None:
                 model = load_or_create_temporal_weights(
                     model=model,
                     fold_idx=fold,
                     device=self.device,
-                    target_layer_name=target_layer
+                    target_layer_name=target_layer,
+                    pretrained_weights_path=pretrained_path
                 )
 
         batch_size = self.cfg.trainer.trainer.batch_size
@@ -137,7 +134,11 @@ class KFoldRunner:
             train_transforms=train_transforms,
         )
 
-        optimizer = instantiate(self.cfg.trainer.optimizer, params=model.parameters())
+        init_mode = init_cfg.get("mode", "scratch")
+        lr_dict = self.cfg.trainer.optimizer.lr
+        lr = lr_dict.get(init_mode, lr_dict.get("scratch"))
+
+        optimizer = instantiate(self.cfg.trainer.optimizer, params=model.parameters(), lr=lr)
 
         scheduler = self._build_scheduler(optimizer)
 
@@ -161,9 +162,6 @@ class KFoldRunner:
             "temporal_mode": self.temporal_mode
         }
 
-        #if self.temporal_mode != TemporalMode.NONE:
-        #    engine_kwargs["temporal_mode"] = self.temporal_mode
-
         engine = engine_cls(**engine_kwargs)
 
         return model, (train_loader, val_loader, test_loader), engine, optimizer
@@ -174,9 +172,6 @@ class KFoldRunner:
 
         warmup = cfg.warmup_epochs
         max_epochs = cfg.cosine.t_max
-
-        #warmup = 5
-        #max_epochs = self.cfg.trainer.trainer.max_epochs
 
         return SequentialLR(
             optimizer,

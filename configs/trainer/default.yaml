@@ -1,8 +1,9 @@
 # Lifecycle of the training process
 trainer:
+  initialization: scratch   # scratch | imagenet | checkpoint
   max_epochs: 50
   accumulation_steps: 3 # in this way we simulate a batchsize of 12
-  eval_freq: 5
+  eval_freq: 1
   save_checkpoint: True
   num_workers: 4
   batch_size: 4
@@ -11,15 +12,15 @@ trainer:
 # Optimizer
 optimizer:
   _target_: torch.optim.AdamW
-  lr: 1e-3
+  
+  lr:
+    scratch: 1e-4
+    imagenet: 3e-4
+    checkpoint: 1e-5
+
   weight_decay: 1e-5
 
 # Scheduler
-#scheduler:
-#  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-#  T_max: ${trainer.trainer.max_epochs}
-#  eta_min: 1e-6
-
 scheduler:
 
     warmup_epochs: 5
@@ -43,6 +44,5 @@ loss:
 
 # Early Stopping
 early_stopping:
-  patience: 5
-  monitor: "val_dice"
+  patience: 10
   mode: "max"

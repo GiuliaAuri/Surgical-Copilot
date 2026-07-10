@@ -56,6 +56,13 @@ class BenchmarkEngine:
 
         self.accumulation_steps = self.cfg.trainer.trainer.get("accumulation_steps", 4)
 
+        self.patience = self.cfg.trainer.early_stopping.patience
+        self.monitor_mode = self.cfg.trainer.early_stopping.mode
+        self.best_path = None
+        self.best_metrics = None
+        self.best_score = -float("inf") if self.monitor_mode == "max" else float("inf")
+        self.epochs_without_improvement = 0
+
         self.metrics = MetricManager(device=self.device)
 
         self.post_pred = Compose([
@@ -360,7 +367,6 @@ class BenchmarkEngine:
                     total_images /
                     max(total_model_time, 1e-8)
                 )
-
                 
                 if scenario_name == "clean":
                     metrics["baseline"] = scores
@@ -380,12 +386,31 @@ class BenchmarkEngine:
 
         return metrics
 
-    def run(self):
-        epochs = self.cfg.trainer.trainer.max_epochs
-        best_fold_metrics = {"dice": 0.0, "hd95": 0.0, "iou": 0.0}
+    def _early_stopping(self, score, epoch):
         
-        best_path = None
+        if self.monitor_mode == "max":
+            improved = score > self.best_score
+        else:
+            improved = score < self.best_score
 
+        if improved:
+            self.best_score = score
+            self.epochs_without_improvement = 0
+            self.best_fold_metrics = score
+            self.best_path = self._save_checkpoint(self.fold_idx)
+        else:
+            self.epochs_without_improvement += 1
+
+        if self.epochs_without_improvement >= self.patience:
+            print(f"\nEarly stopping at epoch {epoch + 1}")
+            return True
+
+        return False
+
+    def run(self):
+
+        epochs = self.cfg.trainer.trainer.max_epochs
+        
         for epoch in range(epochs):
 
             print(f"\n===== Epoch {epoch+1}/{epochs} =====")
@@ -411,14 +436,17 @@ class BenchmarkEngine:
             current_lr = self.optimizer.param_groups[0]["lr"]
             self.logger.log_epoch_metrics(epoch, train_loss, current_lr, metrics)
 
-            if clean_dice > best_fold_metrics["dice"]:
-                best_fold_metrics = metrics["baseline"]
-                best_path = self._save_checkpoint(self.fold_idx)
+            if self._early_stopping(clean_dice, epoch):
+                break
+            
+            #if clean_dice > best_fold_metrics["dice"]:
+            #    best_fold_metrics = metrics["baseline"]
+            #    best_path = self._save_checkpoint(self.fold_idx)
     
-        if best_path is None:
+        if self.best_path is None:
             raise RuntimeError("Training finish without any valid checkpoint.")
 
-        self.model.load_state_dict(torch.load(best_path, map_location=self.device))
+        self.model.load_state_dict(torch.load(self.best_path, map_location=self.device))
 
         # TEST PROCESS
         test_metrics = self._test()

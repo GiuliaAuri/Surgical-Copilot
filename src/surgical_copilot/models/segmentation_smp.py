@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import segmentation_models_pytorch as smp
 
-from surgical_copilot.models.Recurrent_U_Net.recurrent_u_net import RecurrentWrapper
+from surgical_copilot.models.Recurrent_U_Net.runet import RecurrentWrapper
 
 
 class SMPUNet(nn.Module):
@@ -27,7 +27,8 @@ class SMPUNetPlusPlus(nn.Module):
 
 class RecurrentSMPUNet(nn.Module):
     """ U-Net Temporale con modulo ricorrente (GRU/LSTM) al Bottleneck """
-    def __init__(self, encoder_name="resnet18", encoder_weights="imagenet", in_channels=3, classes=1, recurrent_type="gru", bottleneck_dim=512, freeze_backbone=False, warmup_epochs=5, pretrained_weights_path=None, **kwargs):
+    def __init__(self, encoder_name="resnet18", encoder_weights="imagenet", in_channels=3, classes=1, recurrent_type="gru", bottleneck_dim=512, freeze_backbone=False, warmup_epochs=5, pretrained_weights_path=None, 
+                 recurrent_layers=1, **kwargs):
         super().__init__()
         self.freeze_backbone = freeze_backbone
         self.warmup_epochs = warmup_epochs
@@ -37,7 +38,12 @@ class RecurrentSMPUNet(nn.Module):
         self.model = smp.Unet(encoder_name=encoder_name, encoder_weights=encoder_weights, in_channels=in_channels, classes=classes)
         
         # Innesca la ricorrenza al bottleneck
-        self.recurrent = RecurrentWrapper(recurrent_type=recurrent_type, channels=bottleneck_dim)
+        self.recurrent = RecurrentWrapper(
+            recurrent_type=recurrent_type,
+            in_channels=bottleneck_dim,
+            hidden_channels=[bottleneck_dim] * recurrent_layers,
+            kernel_sizes=[3] * recurrent_layers
+        )
 
     def forward(self, x, h_prev=None):
         # Estrae le feature spaziali
