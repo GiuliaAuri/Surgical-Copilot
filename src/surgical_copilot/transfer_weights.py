@@ -3,7 +3,7 @@ import os
 
 def transfer_weights_to_temporal(baseline_path: str, save_path: str, target_layer_name: str, new_channels: int = 4):
     """
-    Funzione universale per trasferire i pesi da una rete RGB a una rete temporale.
+    Universal function to transfer weights from an RGB network to a temporal network.
     """
     if not os.path.exists(baseline_path):
         print(f"[!] ERRORE: File baseline non trovato in {baseline_path}")
@@ -33,11 +33,17 @@ def transfer_weights_to_temporal(baseline_path: str, save_path: str, target_laye
     print(f"[*] -> Pesi temporali salvati in: {save_path}")
     return True
 
-def load_or_create_temporal_weights(model, fold_idx: int, device, target_layer_name: str):
+def load_or_create_temporal_weights(model, fold_idx: int, device, target_layer_name: str, pretrained_weights_path: str):
     """
-    Gestisce automaticamente la ricerca, la creazione e il caricamento 
-    dei pesi per una rete temporale, rispettando il Fold corrente.
+    Manage the loading or creation of temporal weights for a given model and fold index.
+    If the temporal weights do not exist, it will attempt to create them from the baseline weights.
+    If the baseline weights are not found, it will start training from scratch.
     """
+
+    if pretrained_weights_path is None or str(pretrained_weights_path).lower() == "none":
+        print(f"[!] pretrained_weights_path non fornito per il Fold {fold_idx}: partenza da zero.")
+        return model
+
     nome_classe_modello = model.__class__.__name__ 
     path_baseline = f"/work/cvcs2026/DeepLook/results/weights/{nome_classe_modello}/best_fold{fold_idx}.pth"
     path_temporal = f"/work/cvcs2026/DeepLook/results/weights/{nome_classe_modello}/best_fold{fold_idx}_4ch.pth"

@@ -2,7 +2,6 @@ import random
 from pathlib import Path
 from collections import defaultdict
 import torch
-from collections import defaultdict
 
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit
 
@@ -58,18 +57,19 @@ class HemosetDataSet:
                 "patient_id": patient_id,
                 "frame_idx": int(frame_name)
             })
-#
-            for patient_id in self.patient_data:
-                self.patient_data[patient_id] = sorted(
-                    self.patient_data[patient_id],
-                    key=lambda x: x["frame_idx"]
-                )
 
-            for patient_id, frames in self.patient_data.items():
+        for patient_id in self.patient_data:
+            self.patient_data[patient_id] = sorted(
+                self.patient_data[patient_id],
+                key=lambda x: x["frame_idx"]
+            )
 
-                for idx, frame in enumerate(frames):
+        for patient_id, frames in self.patient_data.items():
 
-                    frame["is_first_frame"] = (idx == 0)
+            for idx, frame in enumerate(frames):
+
+                frame["is_first_frame"] = (idx == 0)
+                frame.pop("frame_idx", None)
 
         if not self.patient_data:
             raise RuntimeError("Nessun dato accoppiato (img/mask) trovato. Verifica la struttura delle cartelle.")
@@ -103,24 +103,14 @@ class HemosetDataSet:
             ToTensord(keys=["current_image", "current_label"], dtype=torch.float32),
         ])
         self.base_transforms = Compose(transforms_list)
-        
 
-    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=0.2, batch_size=4, num_workers=2, train_transforms=None):
+    def _build_kfold_splits(self, patients, n_splits, fold_idx):
         
-        patients = sorted(list(self.patient_data.keys()))
-
         if n_splits > len(patients):
             raise ValueError("n_splits > numero di pig")
-        
-        gkf = GroupKFold(n_splits=n_splits)
 
-        folds = list(
-                gkf.split(
-                    X=patients,
-                    y=None,
-                    groups=patients
-                )
-            )
+        gkf = GroupKFold(n_splits=n_splits)
+        folds = list(gkf.split(X=patients, y=None, groups=patients))
 
         if fold_idx >= len(folds):
             raise ValueError(f"fold_idx deve essere < {n_splits}")
@@ -130,10 +120,7 @@ class HemosetDataSet:
         test_patients = [patients[i] for i in test_idx]
 
         gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
-
-        tv_idx, val_idx = next(
-            gss.split(train_val_patients, groups=train_val_patients)
-        )
+        tv_idx, val_idx = next(gss.split(train_val_patients, groups=train_val_patients))
 
         train_patients = [train_val_patients[i] for i in tv_idx]
         val_patients = [train_val_patients[i] for i in val_idx]
@@ -143,19 +130,16 @@ class HemosetDataSet:
         print(f"Val pigs:   {val_patients}")
         print(f"Test pigs:  {test_patients}")
 
-        train_files = []
-        val_files = []
-        test_files = []
+        return train_patients, val_patients, test_patients
 
+    def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=0.2, batch_size=4, num_workers=2, train_transforms=None):
 
-        for p in train_patients:
-            train_files.extend(self.patient_data[p])
+        patients = sorted(list(self.patient_data.keys()))
+        train_patients, val_patients, test_patients = self._build_kfold_splits(patients, n_splits, fold_idx)
 
-        for p in val_patients:
-            val_files.extend(self.patient_data[p])
-
-        for p in test_patients:
-            test_files.extend(self.patient_data[p])
+        train_files = [frame for p in train_patients for frame in self.patient_data[p]]
+        val_files = [frame for p in val_patients for frame in self.patient_data[p]]
+        test_files = [frame for p in test_patients for frame in self.patient_data[p]]
 
         print(
             f"[*] Samples "
@@ -164,11 +148,7 @@ class HemosetDataSet:
             f"test={len(test_files)}"
         )
 
-        train_compose = (Compose([self.base_transforms,train_transforms]) if train_transforms  else self.base_transforms)
-
-        #train_ds = CacheDataset(train_files, transform=train_compose, cache_rate=cache_rate)
-        #val_ds = CacheDataset(val_files, transform=self.base_transforms, cache_rate=cache_rate)
-        #test_ds = CacheDataset(test_files, transform=self.base_transforms, cache_rate=cache_rate)
+        train_compose = Compose([self.base_transforms, train_transforms]) if train_transforms else self.base_transforms
 
         train_ds = Dataset(train_files, transform=train_compose)
         val_ds = Dataset(val_files, transform=self.base_transforms)
@@ -179,6 +159,7 @@ class HemosetDataSet:
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
 
         return train_loader, val_loader, test_loader
+        
 
     def get_sample(self, patient_id=None, index=None, transform=True):
     
@@ -205,8 +186,8 @@ class HemosetDataSet:
         return sample
     
 class HemosetEarlyFusion(HemosetDataSet):
-    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42):
-        super().__init__(root_dir, image_size, seed)
+    def __init__(self, root_dir="data/raw", image_size=(640, 480), seed=42, use_imagenet_norm=False):
+        super().__init__(root_dir, image_size, seed, use_imagenet_norm=use_imagenet_norm)
 
         self.patient_samples = defaultdict(list)
 
@@ -265,67 +246,13 @@ class HemosetEarlyFusion(HemosetDataSet):
 
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=0.2, batch_size=4, num_workers=2, train_transforms=None):
         
-        print("batch_size =", batch_size)
-
         patients = sorted(list(self.patient_data.keys()))
+        train_patients, val_patients, test_patients = self._build_kfold_splits(patients, n_splits, fold_idx)
 
-        if n_splits > len(patients):
-            raise ValueError("n_splits > numero di pig")
-        
-        gkf = GroupKFold(n_splits=n_splits)
+        train_files = [s for p in train_patients for s in self.patient_samples[p]]
+        val_files = [s for p in val_patients for s in self.patient_samples[p]]
+        test_files = [s for p in test_patients for s in self.patient_samples[p]]
 
-        folds = list(
-                gkf.split(
-                    X=patients,
-                    y=None,
-                    groups=patients
-                )
-            )
-
-        if fold_idx >= len(folds):
-            raise ValueError(f"fold_idx deve essere < {n_splits}")
-
-        train_val_idx, test_idx = folds[fold_idx]
-
-        train_val_patients = [patients[i] for i in train_val_idx]
-
-        test_patients = [patients[i] for i in test_idx]
-
-        gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
-
-        tv_idx, val_idx = next(
-            gss.split(train_val_patients, groups=train_val_patients)
-        )
-
-        train_patients = [train_val_patients[i] for i in tv_idx]
-        val_patients = [train_val_patients[i] for i in val_idx]
-
-        print("\n[*] Fold info")
-        print(f"Train pigs: {train_patients}")
-        print(f"Val pigs:   {val_patients}")
-        print(f"Test pigs:  {test_patients}")
-
-        train_files = []
-        val_files = []
-        test_files = []
-
-        for p in train_patients:
-            train_files.extend(self.patient_samples[p])
-
-        for p in val_patients:
-            val_files.extend(self.patient_samples[p])
-
-        for p in test_patients:
-            test_files.extend(self.patient_samples[p])
-
-        print(
-            f"[*] Samples "
-            f"train={len(train_files)} "
-            f"val={len(val_files)} "
-            f"test={len(test_files)}"
-        )
-        
-        #train_compose = (Compose([self.base_transforms,train_transforms]) if train_transforms  else self.base_transforms)
 
         if train_transforms:
             train_compose = Compose([self.base_transforms, train_transforms])
@@ -397,37 +324,7 @@ class HemosetDataSequences(HemosetDataSet):
     def get_loaders(self, fold_idx=0, n_splits=5, cache_rate=1.0, batch_size=4, num_workers=2, train_transforms=None):
         
         patients = sorted(list(self.patient_data.keys()))
-
-        if n_splits > len(patients):
-            raise ValueError("n_splits > numero di pig")
-        
-        gkf = GroupKFold(n_splits=n_splits)
-
-        folds = list(
-                gkf.split(
-                    X=patients,
-                    y=None,
-                    groups=patients
-                )
-            )
-
-        if fold_idx >= len(folds):
-            raise ValueError(f"fold_idx deve essere < {n_splits}")
-
-        train_val_idx, test_idx = folds[fold_idx]
-
-        train_val_patients = [patients[i] for i in train_val_idx]
-
-        test_patients = [patients[i] for i in test_idx]
-
-        gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
-
-        tv_idx, val_idx = next(
-            gss.split(train_val_patients, groups=train_val_patients)
-        )
-
-        train_patients = [train_val_patients[i] for i in tv_idx]
-        val_patients = [train_val_patients[i] for i in val_idx]
+        train_patients, val_patients, test_patients = self._build_kfold_splits(patients, n_splits, fold_idx)
 
         print("\n[*] Fold info")
         print(f"Train pigs: {train_patients}")
@@ -504,7 +401,8 @@ class HemosetDataSequences(HemosetDataSet):
                     "current_label": labels,
                     "sequence_id": f"{p}_{i}",
                     "patient_id": p,
-                    "start_idx": i
+                    "start_idx": i,
+                    "is_first_frame": (i == 0)
                 }
                 sequences.append(seq_sample)
 

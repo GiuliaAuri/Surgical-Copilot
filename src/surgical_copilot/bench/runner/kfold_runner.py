@@ -85,19 +85,16 @@ class KFoldRunner:
                     wandb.finish()
                 self._cleanup(model, engine, loaders, optimizer)
 
-            if self.cfg.logging.wandb_enabled:
-                wandb.finish()
-
         all_metrics = metrics
 
         return all_metrics
 
     def _build_fold(self, dataset, fold):
 
-        model_cfg = OmegaConf.to_container(
-            self.cfg.model[self.cfg.model_key],
-            resolve=True
-        )
+        #model_cfg = OmegaConf.to_container(
+        #    self.cfg.model[self.cfg.model_key],
+        #    resolve=True
+        #)
 
         #if self.temporal_mode != TemporalMode.NONE:
         #    target_layer = model_cfg.temporal_setting.get(
@@ -112,6 +109,9 @@ class KFoldRunner:
         if self.temporal_mode != TemporalMode.NONE:
             
             target_layer = self.cfg.model[self.model_key].temporal_setting.get("temporal_target_layer", None)
+
+            if target_layer is None or str(target_layer).lower() == "none":
+                target_layer = None
 
             if target_layer is not None:
                 model = load_or_create_temporal_weights(

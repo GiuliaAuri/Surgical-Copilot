@@ -40,6 +40,7 @@ unet_early_fusion_warmup_on:
     channels: [32, 64, 128, 256, 512]
     strides: [2, 2, 2, 2]
     num_res_units: 2
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "early_fusion"
@@ -54,6 +55,7 @@ unet_resnet18_early_fusion_warmup_on:
     use_imagenet_norm: True
     in_channels: 4 # 3 RGB + 1 Maschera
     classes: 1
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "early_fusion"
@@ -78,7 +80,7 @@ unet_early_fusion_warmup_off:
 
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: none
+    temporal_target_layer: None
     warmup_epochs: 0
 
 unet_resnet18_early_fusion_warmup_off:
@@ -92,7 +94,7 @@ unet_resnet18_early_fusion_warmup_off:
 
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: "model.0.conv.unit0.conv.weight" # Copia i pesi da 3 a 4 canali
+    temporal_target_layer: None # Copia i pesi da 3 a 4 canali
 
   initialization:
     warmup_epochs: 0
@@ -100,7 +102,9 @@ unet_resnet18_early_fusion_warmup_off:
 
 ## LATE FUSION
 
-r_unet_late_fusion_lstm:
+### WARMUP ON
+
+r_unet_late_fusion_lstm_warmup_on:
   architecture:
     _target_: src.surgical_copilot.models.Recurrent_U_Net.runet.RecurrentUNet
     spatial_dims: 2
@@ -113,12 +117,13 @@ r_unet_late_fusion_lstm:
     recurrent_layers: 1  
     freeze_backbone: True
     warmup_epochs: 5
-    pretrained_weights_path: "weights/Unet/best_fold0.pth"
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
+    temporal_target_layer: None
 
-r_unet_late_fusion_gru:
+r_unet_late_fusion_gru_lstm_warmup_on:
   architecture:
     _target_: src.surgical_copilot.models.Recurrent_U_Net.runet.RecurrentUNet
     spatial_dims: 2
@@ -131,12 +136,13 @@ r_unet_late_fusion_gru:
     recurrent_layers: 1  
     freeze_backbone: True
     warmup_epochs: 5
-    pretrained_weights_path: "weights/Unet/best_fold0.pth"
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
+    temporal_target_layer: None
 
-r_unet_resnet18_late_fusion_lstm:
+r_unet_resnet18_late_fusion_lstm_warmup_on:
   architecture:
     _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
     encoder_name: "resnet18"
@@ -146,11 +152,14 @@ r_unet_resnet18_late_fusion_lstm:
     recurrent_type: "lstm"
     bottleneck_dim: 512
     freeze_backbone: True
+    warmup_epochs: 5
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
+    temporal_target_layer: None
 
-r_unet_resnet18_late_fusion_gru:
+r_unet_resnet18_late_fusion_gru_warmup_on:
   architecture:
     _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
     encoder_name: "resnet18"
@@ -160,9 +169,86 @@ r_unet_resnet18_late_fusion_gru:
     recurrent_type: "gru"
     bottleneck_dim: 512
     freeze_backbone: True
+    warmup_epochs: 5
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
+    temporal_target_layer: None
+
+### WARMUP OFF
+
+r_unet_late_fusion_lstm_warmup_off:
+  architecture:
+    _target_: src.surgical_copilot.models.Recurrent_U_Net.runet.RecurrentUNet
+    spatial_dims: 2
+    in_channels: 3
+    out_channels: 1
+    channels: [32, 64, 128, 256, 512]
+    strides: [2, 2, 2, 2]
+    recurrent_type: "lstm"
+    num_res_units: 2
+    recurrent_layers: 1  
+    freeze_backbone: True
+    warmup_epochs: 0
+    pretrained_weights_path: None
+
+  temporal_setting:
+    temporal_mode: "late_fusion"
+    temporal_target_layer: None
+
+r_unet_late_fusion_gru_warmup_off:
+  architecture:
+    _target_: src.surgical_copilot.models.Recurrent_U_Net.runet.RecurrentUNet
+    spatial_dims: 2
+    in_channels: 3
+    out_channels: 1
+    channels: [32, 64, 128, 256, 512]
+    strides: [2, 2, 2, 2]
+    recurrent_type: "gru"
+    num_res_units: 2
+    recurrent_layers: 1  
+    freeze_backbone: True
+    warmup_epochs: 0
+    pretrained_weights_path: None
+
+  temporal_setting:
+    temporal_mode: "late_fusion"
+    temporal_target_layer: None
+
+r_unet_resnet18_late_fusion_lstm_warmup_off:
+  architecture:
+    _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+    encoder_name: "resnet18"
+    encoder_weights: "imagenet"
+    in_channels: 3
+    classes: 1
+    recurrent_type: "lstm"
+    bottleneck_dim: 512
+    freeze_backbone: True
+    warmup_epochs: 0
+    pretrained_weights_path: None
+
+  temporal_setting:
+    temporal_mode: "late_fusion"
+    temporal_target_layer: None
+
+r_unet_resnet18_late_fusion_gru_warmup_off:
+  architecture:
+    _target_: surgical_copilot.models.segmentation_smp.RecurrentSMPUNet
+    encoder_name: "resnet18"
+    encoder_weights: "imagenet"
+    in_channels: 3
+    classes: 1
+    recurrent_type: "gru"
+    bottleneck_dim: 512
+    freeze_backbone: True
+    warmup_epochs: 0
+    pretrained_weights_path: None
+
+  temporal_setting:
+    temporal_mode: "late_fusion"
+    temporal_target_layer: None
 
 # Unet++
 
@@ -229,6 +315,7 @@ yolo_early_fusion_warmup_on:
     in_channels: 4 # 3 channels RGB + 1 mask t-1 channel
     num_classes: 1
     num_masks: 32
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "early_fusion"
@@ -244,12 +331,14 @@ yolo_early_fusion_warmup_off:
 
   temporal_setting:
     temporal_mode: "early_fusion"
-    temporal_target_layer: none
+    temporal_target_layer: None
     warmup_epochs: 0
 
 ## LATE FUSION
 
-yolo_late_fusion_gru:
+### WARMUP ON
+
+yolo_late_fusion_gru_warmup_on:
 
   architecture:
     _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
@@ -260,13 +349,13 @@ yolo_late_fusion_gru:
     recurrent_layers: 1
     freeze_backbone: True
     warmup_epochs: 5
-    pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
     temporal_target_layer: "yolo.backbone.stem.conv.weight"
 
-yolo_late_fusion_lstm:
+yolo_late_fusion_lstm_warmup_on:
   architecture:
     _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
     in_channels: 3
@@ -275,8 +364,42 @@ yolo_late_fusion_lstm:
     recurrent_type: "lstm"
     freeze_backbone: True
     warmup_epochs: 5
-    pretrained_weights_path: "results/best_YOLOv8Segmenter_fold{fold_idx}.pth"
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
 
   temporal_setting:
     temporal_mode: "late_fusion"
     temporal_target_layer: "yolo.backbone.stem.conv.weight"
+
+## WARMUP OFF
+
+yolo_late_fusion_gru_warmup_off:
+
+  architecture:
+    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
+    in_channels: 3
+    num_classes: 1
+    num_masks: 32
+    recurrent_type: "gru"
+    recurrent_layers: 1
+    freeze_backbone: True
+    warmup_epochs: 0
+    pretrained_weights_path: None
+
+  temporal_setting:
+    temporal_mode: "late_fusion"
+    temporal_target_layer: None
+
+yolo_late_fusion_lstm_warmup_off:
+  architecture:
+    _target_: surgical_copilot.models.yolov8_seg.yolov8_seg_wrapper.YOLOLateFusionTemporalSequential
+    in_channels: 3
+    num_classes: 1
+    num_masks: 32
+    recurrent_type: "lstm"
+    freeze_backbone: True
+    warmup_epochs: 0
+    pretrained_weights_path: None
+
+  temporal_setting:
+    temporal_mode: "late_fusion"
+    temporal_target_layer: None
