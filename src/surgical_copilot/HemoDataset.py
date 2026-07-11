@@ -154,7 +154,7 @@ class HemosetDataSet:
         val_ds = Dataset(val_files, transform=self.base_transforms)
         test_ds = Dataset(test_files, transform=self.base_transforms)
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=torch.cuda.is_available(), drop_last=True)
         val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=torch.cuda.is_available())
 
@@ -263,7 +263,7 @@ class HemosetEarlyFusion(HemosetDataSet):
         val_ds = Dataset(val_files, transform=self.base_transforms)
         test_ds = Dataset(test_files, transform=self.base_transforms)
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=False, drop_last=True)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=False, drop_last=True)
         val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=False)
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=False)
 
@@ -361,7 +361,7 @@ class HemosetDataSequences(HemosetDataSet):
         val_ds = Dataset(val_files, transform=eval_compose)
         test_ds = Dataset(test_files, transform=eval_compose)
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=False, drop_last=True, persistent_workers=False)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=False, drop_last=True, persistent_workers=False)
         val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=False, persistent_workers=False)
         test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=False, persistent_workers=False)
 

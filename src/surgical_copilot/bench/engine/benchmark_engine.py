@@ -68,7 +68,7 @@ class BenchmarkEngine:
         self.post_pred = Compose([
             Activations(sigmoid=True),
             AsDiscrete(threshold=0.5),
-            KeepLargestConnectedComponent(applied_labels=None) ## !!!!
+            #KeepLargestConnectedComponent(applied_labels=None) ## !!!!
         ])
         self.post_label = Compose([
             AsDiscrete(threshold=0.5)
@@ -120,21 +120,23 @@ class BenchmarkEngine:
                     self.model(dummy_input)
 
     def _forward_step(self, x, y):
-        logits = self.model(x)
+        # logit è l'output grezzo del modello
+        logit = self.model(x)
 
-        # Gestione Deep Supervision
-        logits = logits[0] if isinstance(logits, list) else logits
-
-        # manage the Deep Supervision configuration
-        if isinstance(logits, list):
-            loss = sum(self.loss_fn(l, y) for l in logits) / len(logits)
+        # Gestione differenziata
+        if isinstance(logit, list):
+            # Calcolo corretto della loss su tutti i livelli
+            loss = sum(self.loss_fn(l, y) for l in logit) / len(logit)
+            # Logits per le metriche (usiamo il primo che è l'output finale)
+            main_logits = logit[0]
         else:
-            loss = self.loss_fn(logits, y)
+            loss = self.loss_fn(logit, y)
+            main_logits = logit
 
         return {
-            "logits": logits,
+            "logits": main_logits,
             "loss": loss / self.accumulation_steps
-        }        
+        }    
 
     def _scale_loss(self, i, loss):
 
