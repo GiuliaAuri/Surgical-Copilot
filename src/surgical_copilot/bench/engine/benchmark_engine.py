@@ -463,7 +463,7 @@ class BenchmarkEngine:
         #model_class_name = self.model.__class__.__name__
         model_class_name = self.cfg.get("model_key", "unknown_model")
 
-        base_dir = Path("/work/cvcs2026/DeepLook/results/weights")
+        base_dir = Path("/work/cvcs2026/DeepLook/results/weights_last")
         weights_dir = base_dir / model_class_name
         weights_dir.mkdir(parents=True, exist_ok=True)
 

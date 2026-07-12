@@ -57,7 +57,7 @@ unet_early_fusion_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/UNet/best_fold{fold_idx}.pth"
     freeze_backbone: false
     warmup_epochs: 5
 
@@ -76,7 +76,7 @@ unet_resnet18_early_fusion_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/SMPUNet/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
 
@@ -144,7 +144,7 @@ r_unet_late_fusion_lstm_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/UNet/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
 
@@ -166,7 +166,7 @@ r_unet_late_fusion_gru_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/UNet/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/UNet/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
 
@@ -187,7 +187,7 @@ r_unet_resnet18_late_fusion_lstm_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/SMPUNet/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
     
@@ -209,7 +209,7 @@ r_unet_resnet18_late_fusion_gru_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/SMPUNet/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/SMPUNet/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
 
@@ -394,11 +394,11 @@ yolo_early_fusion_warmup_on:
     in_channels: 4 # 3 channels RGB + 1 mask t-1 channel
     num_classes: 1
     num_masks: 32
-    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
+    pretrained_weights_path: "/work/cvcs2026/DeepLook/results/weights_last/CustomYOLOSemantic/best_fold{fold_idx}.pth"
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/CustomYOLOSemantic/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
 
@@ -439,7 +439,7 @@ yolo_late_fusion_gru_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/CustomYOLOSemantic/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
 
@@ -458,7 +458,7 @@ yolo_late_fusion_lstm_warmup_on:
 
   initialization:
     mode: checkpoint
-    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights/CustomYOLOSemantic/best_fold{fold_idx}.pth"
+    checkpoint_path: "/work/cvcs2026/DeepLook/results/weights_last/CustomYOLOSemantic/best_fold{fold_idx}.pth"
     freeze_backbone: true
     warmup_epochs: 5
 
