@@ -46,17 +46,35 @@ class RecurrentSMPUNet(nn.Module):
         )
 
     def forward(self, x, h_prev=None):
-        # Estrae le feature spaziali
-        features = self.model.encoder(x)
-        bottleneck = features[-1]
+        b, t, c, h, w = x.shape
         
-        # Elaborazione temporale
+        # 1. Encoder (Time-Distributed)
+        x_flat = x.view(b * t, c, h, w)
+        features_flat = self.model.encoder(x_flat)
+        
+        # 2. Trasformazione sequenziale
+        features_seq = []
+        for f in features_flat:
+            features_seq.append(f.view(b, t, f.shape[1], f.shape[2], f.shape[3]))
+            
+        bottleneck = features_seq[-1]
+        
+        # 3. Elaborazione temporale
         bottleneck, current_state = self.recurrent(bottleneck, h_prev)
         
-        # Ripristino e decodifica
-        features = list(features)
-        features[-1] = bottleneck
-        decoder_output = self.model.decoder(features)
+        # 4. Preparazione per il decoder
+        # Il decoder di smp si aspetta una LISTA di tensori (B*T, C, H, W)
+        decoder_features = []
+        for i in range(len(features_seq) - 1):
+            f = features_seq[i]
+            decoder_features.append(f.view(b * t, f.shape[2], f.shape[3], f.shape[4]))
+        
+        # Aggiungiamo il bottleneck processato dalla RNN
+        decoder_features.append(bottleneck.view(b * t, bottleneck.shape[2], bottleneck.shape[3], bottleneck.shape[4]))
+        
+        # 5. Il decoder si aspetta gli argomenti spacchettati
+        decoder_output = self.model.decoder(decoder_features)
+        
         logits = self.model.segmentation_head(decoder_output)
         
-        return logits, current_state
+        return logits.view(b, t, 1, h, w), current_state
