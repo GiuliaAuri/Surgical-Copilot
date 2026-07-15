@@ -24,9 +24,10 @@ This project challenges the boundaries of simple classification. **Surgical-Copi
 
 ## 🎯 Core Objectives
 
-* **Dual-Stage Localization:** A unified pipeline handling both region segmentation (*where is the blood?*) and source tracking (*where is it coming from?*).
-* **Real-Time Optimization:** Achieving a surgical frame rate of **&ge; 30 FPS** utilizing NVIDIA TensorRT for low-latency inference.
-* **Benchmarking with HemoSet:** Training and validating models using the first specialized dataset for hemostasis management automation, employing a strict Patient-Level Group K-Fold cross-validation to prevent data leakage.
+* **Blood Pool Segmentation:** A unified deep learning pipeline for accurate segmentation of blood pooling regions in minimally invasive surgical videos.
+* **Robustness to Surgical Perturbations:** Evaluation under challenging intraoperative conditions, including smoke, blur, specular reflections, contrast variations, noise, and illumination changes, with temporal architectures designed to improve segmentation stability.
+* **Real-Time Performance:** Optimized inference achieving surgical frame rates of **≥ 30 FPS** through NVIDIA TensorRT acceleration.
+* **Benchmarking with HemoSet:** Training and validating models on the **HemoSet** dataset using strict Patient-Level Group K-Fold cross-validation to ensure fair evaluation and prevent data leakage.
 
 ---
 
@@ -40,6 +41,8 @@ During inference, this engine subjects the models to iterative stress tests, sim
 * **`blur_only`**: Induces severe motion blur caused by rapid instrument handling.
 * **`chirurgical_worst_case`**: A simultaneous application of all disruptions to identify the absolute breaking point of the architectures.
 
+<img width="3507" height="360" alt="image" src="https://github.com/user-attachments/assets/830cdbc2-34c1-4dfb-b6ad-0acdabbf8a8f" />
+
 ---
 
 ## Verifying Robustness: The Shift to Temporal Approaches
@@ -49,6 +52,22 @@ Our initial benchmarking explored a wide taxonomy of **Spatial Baselines** (U-Ne
 To effectively verify and achieve clinical robustness, we pivoted to **Temporal/Recurrent Approaches**. By exploiting the chronological sequence of the endoscopic video, we aim to maintain anatomical consistency even when individual frames are heavily degraded:
 * **Recurrent Architectures:** Integration of pre-trained spatial encoders (e.g., ResNet18) with recurrent bottleneck modules (**ConvGRU** or **ConvLSTM**).
 * **Temporal Dataloading:** Unlike spatial models that require Independent and Identically Distributed (I.I.D.) shuffling, our temporal dataloaders strictly preserve the endoscope's recording sequence, allowing the network to learn the fluid dynamics of a hemorrhage.
+
+<table>
+<tr>
+<td align="center" width="50%">
+<img width="1887" height="605" alt="yolotemp" src="https://github.com/user-attachments/assets/b6b9e4a5-6c87-4da1-93b9-57ab237174d6" />
+<br>
+<b>YOLOv8 + Temporal Fusion</b>
+</td>
+
+<td align="center" width="50%">
+<img width="1581" height="868" alt="recurrent unet" src="https://github.com/user-attachments/assets/fad972bb-662f-4830-8b4b-4124c80324b8" />
+<br>
+<b>Recurrent U-Net</b>
+</td>
+</tr>
+</table>
 
 This evolution from static image segmentation to dynamic video analysis is the cornerstone of building a truly resilient surgical co-pilot.
 
